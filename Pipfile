@@ -31,7 +31,7 @@ jsonschema = "*"
 mergedeep = "*"
 networkx = "*"
 nltk = "*"
-pipenv = "*"
+pipenv = "==2022.3.24"
 prettytable = "==0.7.2"
 pykwalify = "*"
 pyspellchecker = "*"
@@ -52,12 +52,10 @@ pytest-freezegun = "*"
 python-dotenv = "*"
 importlib-resources = "*"
 dictdiffer = "*"
-setuptools = "*"
 markupsafe = "==2.0.1"
 imagesize = "*"
 cryptography = "*"
 dateparser = "*"
-
 # linter-related
 typed-ast = "*"
 types-dateparser="*"
@@ -75,7 +73,8 @@ types-six="*"
 types-PyMySQL="*"
 types-protobuf="*"
 typing-extensions="*"
-
+klara = "==0.6.3"
+ordered-set = "*"
 
 [dev-packages]
 mitmproxy = "*"
@@ -88,8 +87,6 @@ pytest-mock = "*"
 pytest-subprocess = "*"
 requests-mock = "*"
 Deprecated = "*"
-
-
 
 [requires]
 python_version = "3.8"
