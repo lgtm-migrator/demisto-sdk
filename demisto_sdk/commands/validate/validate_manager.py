@@ -1,7 +1,8 @@
 import os
 from concurrent.futures._base import Future, as_completed
 from configparser import ConfigParser, MissingSectionHeaderError
-from typing import Callable, List, Optional, Set, Tuple
+from pathlib import Path
+from typing import Callable, List, Optional, Set, Tuple, Union
 
 import click
 import pebble
@@ -88,7 +89,7 @@ from demisto_sdk.commands.common.tools import (
     get_api_module_integrations_set, get_content_path, get_file,
     get_pack_ignore_file_path, get_pack_name, get_pack_names_from_files,
     get_relative_path_from_packs_dir, get_yaml, open_id_set_file,
-    run_command_os)
+    run_command_os, get_id_set_file, NoIDSetFile)
 from demisto_sdk.commands.create_id_set.create_id_set import IDSetCreator
 
 
@@ -910,7 +911,8 @@ class ValidateManager:
         if is_modified and self.is_backward_check:
             return all([integration_validator.is_valid_file(validate_rn=False, skip_test_conf=self.skip_conf_json,
                                                             check_is_unskipped=self.check_is_unskipped,
-                                                            conf_json_data=self.conf_json_data, is_modified=is_modified),
+                                                            conf_json_data=self.conf_json_data,
+                                                            is_modified=is_modified),
                         integration_validator.is_backward_compatible()])
         else:
             return integration_validator.is_valid_file(validate_rn=False, skip_test_conf=self.skip_conf_json,
@@ -1549,7 +1551,9 @@ class ValidateManager:
                 file_path = str(path)
 
             try:
-                formatted_path, old_path, valid_file_extension = self.check_file_relevance_and_format_path(file_path, old_path, old_format_files)
+                formatted_path, old_path, valid_file_extension = self.check_file_relevance_and_format_path(file_path,
+                                                                                                           old_path,
+                                                                                                           old_format_files)
                 valid_types.add(valid_file_extension)
                 if formatted_path:
                     if old_path:
@@ -1594,7 +1598,8 @@ class ValidateManager:
         if file_type in [FileType.PYTHON_FILE, FileType.POWERSHELL_FILE, FileType.JAVASCRIPT_FILE, FileType.XIF_FILE]:
             if not (str(file_path).endswith('_test.py') or str(file_path).endswith('.Tests.ps1') or
                     str(file_path).endswith('_test.js')):
-                file_path = file_path.replace('.py', '.yml').replace('.ps1', '.yml').replace('.js', '.yml').replace('.xif', '.yml')
+                file_path = file_path.replace('.py', '.yml').replace('.ps1', '.yml').replace('.js', '.yml').replace(
+                    '.xif', '.yml')
 
                 if old_path:
                     old_path = old_path.replace('.py', '.yml').replace('.ps1', '.yml').replace('.js', '.yml')
@@ -1769,30 +1774,13 @@ class ValidateManager:
 
         return packs
 
-    def get_id_set_file(self, skip_id_set_creation, id_set_path):
-        """
+    def get_id_set_file(self, skip_id_set_creation: bool, id_set_path: Union[str, Path]):
+        try:
+            return get_id_set_file(id_set_path, skip_id_set_creation, self.no_configuration_prints)
 
-        Args:
-            skip_id_set_creation (bool): whether should skip id set validation or not
-            this will also determine whether a new id_set can be created by validate.
-            id_set_path (str): id_set.json path file
-
-        Returns:
-            str: is_set file path
-        """
-        id_set = {}
-        if not os.path.isfile(id_set_path):
-            if not skip_id_set_creation:
-                id_set, _, _ = IDSetCreator(print_logs=False).create_id_set()
-
-        else:
-            id_set = open_id_set_file(id_set_path)
-
-        if not id_set and not self.no_configuration_prints:
+        except NoIDSetFile:
             error_message, error_code = Errors.no_id_set_file()
-            self.handle_error(error_message, error_code, file_path=os.path.join(os.getcwd(), id_set_path), warning=True)
-
-        return id_set
+            self.handle_error(error_message, error_code, file_path=str(Path('id_set_path').absolute()), warning=True)
 
     def check_and_validate_deprecated(self, file_type, file_path, current_file, is_modified, is_backward_check,
                                       validator):

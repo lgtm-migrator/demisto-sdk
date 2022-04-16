@@ -1,6 +1,7 @@
 import os
 from abc import ABC, abstractmethod
 from distutils.version import LooseVersion
+from typing import NamedTuple
 
 import click
 
@@ -81,7 +82,8 @@ class LayoutBaseValidator(ContentEntityValidator, ABC):
 
 class LayoutsContainerValidator(LayoutBaseValidator):
     def __init__(self, structure_validator, **kwargs):
-        super().__init__(structure_validator, oldest_supported_version=LAYOUTS_CONTAINERS_OLDEST_SUPPORTED_VERSION, **kwargs)
+        super().__init__(structure_validator, oldest_supported_version=LAYOUTS_CONTAINERS_OLDEST_SUPPORTED_VERSION,
+                         **kwargs)
 
     def is_valid_layout(self, validate_rn=True, id_set_file=None, is_circle=False) -> bool:
         return all([super().is_valid_layout(),
@@ -175,6 +177,46 @@ class LayoutsContainerValidator(LayoutBaseValidator):
         return super()._is_id_equals_name('layoutscontainer')
 
 
+InvalidIncidentFields = NamedTuple('InvalidIncidentFields',
+                                   (('clean_names', set), ('real_names', set), ('is_invalid', bool)))
+
+
+def get_invalid_incident_fields(layout: dict, id_set: dict) -> InvalidIncidentFields:
+    """ layout is the yaml.get('layout') part """
+    clean_names = []
+    real_names = []
+
+    layout_sections = layout.get('sections', ())
+    for section in layout_sections:
+        for field in section.get('fields', ()):
+            inc_field = field.get('fieldId', '')
+            clean_names.append(inc_field.replace('incident_', ''))
+            real_names.append(inc_field)
+
+    layout_tabs = layout.get('tabs', ())
+    for tab in layout_tabs:
+        for section in filter(None, tab.get('sections', ())):
+            for item in section.get('items', ()):
+                inc_field = item.get('fieldId', '')
+                clean_names.append(inc_field.replace('incident_', '').replace('indicator_', ''))
+                real_names.append(inc_field)
+
+    content_incident_fields = get_all_incident_and_indicator_fields_from_id_set(id_set, 'layout')
+    built_in_fields = [field.lower() for field in BUILT_IN_FIELDS] + LAYOUT_AND_MAPPER_BUILT_IN_FIELDS
+
+    invalid_clean = set()
+    invalid_real = set()
+
+    for i, clean_name in enumerate(clean_names):  # both lists are in the same length
+        if clean_name.lower() not in built_in_fields and clean_name not in content_incident_fields:
+            invalid_clean.add(clean_name)
+
+            real_name = real_names[i]  # indexes of real and clean names match
+            invalid_real.add(real_name)
+
+    return InvalidIncidentFields(invalid_clean, invalid_real, bool(invalid_real))
+
+
 class LayoutValidator(LayoutBaseValidator):
 
     def is_valid_from_version(self) -> bool:
@@ -211,7 +253,7 @@ class LayoutValidator(LayoutBaseValidator):
         return True
 
     def is_incident_field_exist(self, id_set_file, is_circle) -> bool:
-        """Checks if incident field is valid - exist in the content.
+        """Checks if incident field is valid - exists in content.
 
         Returns:
             bool. True if incident field is valid, else False.
@@ -223,36 +265,10 @@ class LayoutValidator(LayoutBaseValidator):
             click.secho("Skipping mapper incident field validation. Could not read id_set.json.", fg="yellow")
             return True
 
-        layout_incident_fields = []
+        invalid = get_invalid_incident_fields(self.current_file.get('layout', {}), id_set_file)
 
-        layout = self.current_file.get('layout', {})
-        layout_sections = layout.get('sections', [])
-        for section in layout_sections:
-            for field in section.get('fields', []):
-                inc_field = field.get('fieldId', '')
-                layout_incident_fields.append(inc_field.replace('incident_', ''))
-
-        layout_tabs = layout.get('tabs', [])
-        for tab in layout_tabs:
-            layout_sections = tab.get('sections', [])
-
-            for section in layout_sections:
-                if section and section.get('items'):
-                    for item in section.get('items', []):
-                        inc_field = item.get('fieldId', '')
-                        layout_incident_fields.append(inc_field.replace('incident_', '').replace('indicator_', ''))
-
-        content_incident_fields = get_all_incident_and_indicator_fields_from_id_set(id_set_file, 'layout')
-
-        built_in_fields = [field.lower() for field in BUILT_IN_FIELDS] + LAYOUT_AND_MAPPER_BUILT_IN_FIELDS
-
-        invalid_inc_fields_list = []
-        for inc_field in layout_incident_fields:
-            if inc_field and inc_field.lower() not in built_in_fields and inc_field not in content_incident_fields:
-                invalid_inc_fields_list.append(inc_field) if inc_field not in invalid_inc_fields_list else None
-
-        if invalid_inc_fields_list:
-            error_message, error_code = Errors.invalid_incident_field_in_layout(invalid_inc_fields_list)
+        if invalid.is_invalid:
+            error_message, error_code = Errors.invalid_incident_field_in_layout(invalid.clean_names)
             if self.handle_error(error_message, error_code, file_path=self.file_path):
                 return False
         return True

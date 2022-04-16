@@ -51,6 +51,7 @@ from demisto_sdk.commands.common.git_content_config import (GitContentConfig,
                                                             GitProvider)
 from demisto_sdk.commands.common.git_util import GitUtil
 from demisto_sdk.commands.common.handlers import JSON_Handler, YAML_Handler
+from demisto_sdk.commands.create_id_set.create_id_set import IDSetCreator
 
 json = JSON_Handler()
 
@@ -1816,16 +1817,43 @@ def camel_to_snake(camel: str) -> str:
     return snake
 
 
-def open_id_set_file(id_set_path):
+class NoIDSetFile(IOError, FileNotFoundError):
+    pass
+
+
+def get_id_set_file(file_path: Union[str, Path], skip_id_set_creation: bool, no_configuration_prints: bool) -> dict:
+    """
+         Args:
+             skip_id_set_creation (bool): whether to skip id set validation
+             this will also determine whether a new id_set can be created by validate.
+             file_path (str): id_set.json path file
+
+         Returns:
+             str: is_set file path
+         """
     id_set = {}
-    try:
-        with open(id_set_path, 'r') as id_set_file:
-            id_set = json.load(id_set_file)
-    except IOError:
+    file_path = Path(file_path)
+
+    if file_path.exists():
+        id_set = open_id_set_file(file_path)
+    else:
+        if not skip_id_set_creation:
+            id_set, _, _ = IDSetCreator(print_logs=False).create_id_set()
+
+    if not id_set and not no_configuration_prints:
+        raise NoIDSetFile()
+
+    return id_set
+
+
+def open_id_set_file(id_set_path: Union[str, Path]):
+    if Path(id_set_path).exists():
+        # until get_file is fixed to raise when the file doesn't exist, instead of returning {}..
+        return get_file(str(id_set_path), 'json')
+
+    else:
         print_warning("Could not open id_set file")
-        raise
-    finally:
-        return id_set
+        raise NoIDSetFile()
 
 
 def get_demisto_version(client: demisto_client) -> str:
@@ -1885,10 +1913,10 @@ def get_file_version_suffix_if_exists(current_file: Dict, check_in_display: bool
     return None
 
 
-def get_all_incident_and_indicator_fields_from_id_set(id_set_file, entity_type):
+def get_all_incident_and_indicator_fields_from_id_set(id_set: dict, entity_type: str):
     fields_list = []
     for item in ['IncidentFields', 'IndicatorFields']:
-        all_item_fields = id_set_file.get(item)
+        all_item_fields = id_set.get(item)
         for item_field in all_item_fields:
             for field, field_info in item_field.items():
                 if entity_type == 'mapper' or entity_type == 'old classifier':
@@ -2349,7 +2377,8 @@ def get_current_repo() -> Tuple[str, str, str]:
         return "Unknown source", '', ''
 
 
-def get_item_marketplaces(item_path: str, item_data: Dict = None, packs: Dict[str, Dict] = None, item_type: str = None) -> List:
+def get_item_marketplaces(item_path: str, item_data: Dict = None, packs: Dict[str, Dict] = None,
+                          item_type: str = None) -> List:
     """
     Return the supporting marketplaces of the item.
 

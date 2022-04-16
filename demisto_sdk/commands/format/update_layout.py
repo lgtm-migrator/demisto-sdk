@@ -1,14 +1,16 @@
 import os
 import re
 from abc import ABC
-from typing import Tuple
+from pathlib import Path
+from typing import Tuple, Optional
 
 import click
 
 from demisto_sdk.commands.common.constants import FileType
 from demisto_sdk.commands.common.handlers import YAML_Handler
+from demisto_sdk.commands.common.hook_validations.layout import get_invalid_incident_fields, InvalidIncidentFields
 from demisto_sdk.commands.common.tools import (LOG_COLORS, print_color,
-                                               print_error)
+                                               print_error, get_id_set_file)
 from demisto_sdk.commands.format.format_constants import (
     DEFAULT_VERSION, ERROR_RETURN_CODE, NEW_FILE_DEFAULT_5_FROMVERSION,
     SKIP_RETURN_CODE, SUCCESS_RETURN_CODE, VERSION_6_0_0)
@@ -31,20 +33,24 @@ LAYOUT_PREFIX = 'layout-'
 
 class LayoutBaseFormat(BaseUpdateJSON, ABC):
 
-    def __init__(self,
-                 input: str = '',
-                 output: str = '',
-                 path: str = '',
-                 from_version: str = '',
-                 no_validate: bool = False,
-                 verbose: bool = False,
-                 clear_cache: bool = False,
-                 **kwargs):
+    def __init__(
+            self,
+            input: str = '',
+            output: str = '',
+            path: str = '',
+            from_version: str = '',
+            no_validate: bool = False,
+            verbose: bool = False,
+            clear_cache: bool = False,
+            id_set_file: Optional[Path] = None,
+            **kwargs
+    ):
         super().__init__(input=input, output=output, path=path, from_version=from_version, no_validate=no_validate,
                          verbose=verbose, clear_cache=clear_cache, **kwargs)
 
         # layoutscontainer kinds are unique fields to containers, and shouldn't be in layouts
         self.is_container = any(self.data.get(kind) for kind in LAYOUTS_CONTAINER_KINDS)
+        self.id_set_file = get_id_set_file(self.skip_id_set_creation, self.id_set_path, self.no_configuration_prints)
 
     def format_file(self) -> Tuple[int, int]:
         """Manager function for the Layout JSON updater."""
@@ -59,6 +65,7 @@ class LayoutBaseFormat(BaseUpdateJSON, ABC):
             click.secho(f'\n================= Updating file {self.source_file} =================', fg='bright_blue')
             if self.is_container:
                 self.layoutscontainer__run_format()
+                # todo remove invalid incident fields in container too?
             else:
                 self.layout__run_format()
             self.set_description()
@@ -88,7 +95,54 @@ class LayoutBaseFormat(BaseUpdateJSON, ABC):
         # version is both in layout key and in base dict
         self.set_version_to_default(self.data['layout'])
         self.set_toVersion()
+        self.remove_invalid_fields()
         self.layout__set_output_path()
+
+    def remove_invalid_fields(self):
+        if not self.id_set_file:
+            # todo raise warning?
+            return
+
+        layout = self.data.get('layout', {})
+        invalid_fields = get_invalid_incident_fields(layout, get_id_set_file(self.id_set_file))  # todo test
+
+        if not invalid_fields.is_invalid:  # valid, do nothing.
+            return
+
+        # fix sections
+        valid_sections = []
+        for section in layout.get('sections'):
+            valid_section_fields = []
+            for field in section.get('fields', ()):
+                field_id = field.get('fieldId', '')  # todo what if field_id defaults to '' ?
+                if field_id and field_id not in invalid_fields.real_names:
+                    valid_section_fields.append(field)
+
+            if valid_section_fields:  # if anything should be changed
+                section['fields'] = valid_section_fields
+                valid_sections.append(section)
+
+        if valid_sections:
+            self.data['layout']['sections'] = valid_sections
+
+        # fix tabs
+        valid_tabs = []
+        for tab in layout.get('tabs', ()):
+            valid_tab_sections = []
+            for section in filter(None, tab.get('sections', ())):
+                valid_section_items = []
+                for item in section.get('items', ()):
+                    field_id = item.get('fieldId', '')
+                    if field_id and field_id not in invalid_fields.real_names:
+                        valid_section_items.append(item)
+                if valid_section_items:
+                    section['items'] = valid_section_items  # section will now be fixed
+                valid_tab_sections.append(section)  # fixed (if there were items) or untouched
+            tab['sections'] = valid_tab_sections
+            valid_tabs.append(tab)
+
+        if valid_tabs:
+            self.data['layout']['tabs'] = valid_tabs
 
     def layout__set_output_path(self):
         output_basename = os.path.basename(self.output_file)
