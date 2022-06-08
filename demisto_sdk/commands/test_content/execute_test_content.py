@@ -62,8 +62,8 @@ def execute_test_content(**kwargs):
     build_context = BuildContext(kwargs, logging_manager)
     use_retries_mechanism = kwargs.get('use_retries', False)
     threads_list = []
-    for server_ip, port in build_context.instances_ips.items():
-        tests_execution_instance = ServerContext(build_context, server_private_ip=server_ip, tunnel_port=port,
+    for server_ip in build_context.instances_ips:
+        tests_execution_instance = ServerContext(build_context, server_private_ip=server_ip,
                                                  use_retries_mechanism=use_retries_mechanism)
         threads_list.append(Thread(target=tests_execution_instance.execute_tests))
 
