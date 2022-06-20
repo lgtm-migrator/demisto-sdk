@@ -22,10 +22,10 @@ from demisto_sdk.commands.common.constants import (
     DEFAULT_ID_SET_PATH, GENERIC_DEFINITIONS_DIR, GENERIC_FIELDS_DIR,
     GENERIC_MODULES_DIR, GENERIC_TYPES_DIR, INCIDENT_FIELDS_DIR,
     INCIDENT_TYPES_DIR, INDICATOR_FIELDS_DIR, INDICATOR_TYPES_DIR, JOBS_DIR,
-    LAYOUTS_DIR, LISTS_DIR, MAPPERS_DIR, MODELING_RULES_DIR, MP_V2_ID_SET_PATH,
-    PARSING_RULES_DIR, REPORTS_DIR, SCRIPTS_DIR, TEST_PLAYBOOKS_DIR,
-    TRIGGER_DIR, WIDGETS_DIR, WIZARDS_DIR, XSIAM_DASHBOARDS_DIR,
-    XSIAM_REPORTS_DIR, FileType, MarketplaceVersions)
+    LAYOUTS_DIR, LISTS_DIR, MAPPERS_DIR, MODELING_RULES_DIR, PARSING_RULES_DIR,
+    REPORTS_DIR, SCRIPTS_DIR, TEST_PLAYBOOKS_DIR, TRIGGER_DIR, WIDGETS_DIR,
+    WIZARDS_DIR, XSIAM_DASHBOARDS_DIR, XSIAM_REPORTS_DIR, FileType,
+    MarketplaceVersions)
 from demisto_sdk.commands.common.handlers import JSON_Handler
 from demisto_sdk.commands.common.tools import (LOG_COLORS, find_type,
                                                get_current_repo,
@@ -2037,10 +2037,7 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, pack_to_c
     Returns: id-set object
     """
     if id_set_path == "":
-        if marketplace == MarketplaceVersions.MarketplaceV2.value:
-            id_set_path = MP_V2_ID_SET_PATH
-        else:
-            id_set_path = DEFAULT_ID_SET_PATH
+        id_set_path = DEFAULT_ID_SET_PATH
 
     if not objects_to_create:
         if marketplace == MarketplaceVersions.MarketplaceV2.value:
@@ -2144,7 +2141,7 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, pack_to_c
                                                                        ),
                                                                get_integrations_paths(pack_to_create)):
 
-                for _id, data in (arr[0].items() if arr and isinstance(arr, list) else {}):
+                for _id, data in (arr[0] if arr and isinstance(arr, list) else {}).items():
                     if data.get('pack'):
                         packs_dict[data.get('pack')].setdefault('ContentItems', {}).setdefault('integrations',
                                                                                                []).append(_id)
@@ -2164,7 +2161,7 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, pack_to_c
                                                                        data_extraction_func=get_playbook_data,
                                                                        ),
                                                                get_playbooks_paths(pack_to_create)):
-                for _id, data in (arr[0].items() if arr and isinstance(arr, list) else {}):
+                for _id, data in (arr[0] if arr and isinstance(arr, list) else {}).items():
                     if data.get('pack'):
                         packs_dict[data.get('pack')].setdefault('ContentItems', {}).setdefault('playbooks', []).append(
                             _id)
@@ -2182,7 +2179,7 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, pack_to_c
                                                                        print_logs=print_logs,
                                                                        ),
                                                                get_general_paths(SCRIPTS_DIR, pack_to_create)):
-                for _id, data in (arr[0].items() if arr and isinstance(arr, list) else {}):
+                for _id, data in (arr[0] if arr and isinstance(arr, list) else {}).items():
                     if data.get('pack'):
                         packs_dict[data.get('pack')].setdefault('ContentItems', {}).setdefault('scripts', []).append(
                             _id)
@@ -2200,6 +2197,11 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, pack_to_c
                                          print_logs=print_logs,
                                          ),
                                  get_general_paths(TEST_PLAYBOOKS_DIR, pack_to_create)):
+                for _id, data in (pair[0] or pair[1] or {}).items():
+                    if data.get('pack'):
+                        packs_dict[data.get('pack')].setdefault('ContentItems', {}).setdefault('TestPlaybooks',
+                                                                                               []).append(_id)
+
                 if pair[0]:
                     testplaybooks_list.append(pair[0])
                 if pair[1]:
@@ -2219,7 +2221,7 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, pack_to_c
                                                                        data_extraction_func=get_classifier_data,
                                                                        ),
                                                                get_general_paths(CLASSIFIERS_DIR, pack_to_create)):
-                for _id, data in (arr[0].items() if arr and isinstance(arr, list) else {}):
+                for _id, data in (arr[0] if arr and isinstance(arr, list) else {}).items():
                     if data.get('pack'):
                         packs_dict[data.get('pack')].setdefault('ContentItems', {}).setdefault('classifiers',
                                                                                                []).append(_id)
@@ -2239,7 +2241,7 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, pack_to_c
                                                                        data_extraction_func=get_dashboard_data,
                                                                        ),
                                                                get_general_paths(DASHBOARDS_DIR, pack_to_create)):
-                for _id, data in (arr[0].items() if arr and isinstance(arr, list) else {}):
+                for _id, data in (arr[0] if arr and isinstance(arr, list) else {}).items():
                     if data.get('pack'):
                         packs_dict[data.get('pack')].setdefault('ContentItems', {}).setdefault('dashboards', []).append(
                             _id)
@@ -2259,7 +2261,7 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, pack_to_c
                                                                        data_extraction_func=get_incident_type_data,
                                                                        ),
                                                                get_general_paths(INCIDENT_TYPES_DIR, pack_to_create)):
-                for _id, data in (arr[0].items() if arr and isinstance(arr, list) else {}):
+                for _id, data in (arr[0] if arr and isinstance(arr, list) else {}).items():
                     if data.get('pack'):
                         packs_dict[data.get('pack')].setdefault('ContentItems', {}).setdefault('incidentTypes',
                                                                                                []).append(_id)
@@ -2279,7 +2281,7 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, pack_to_c
                                                                        incident_types=incident_type_list,
                                                                        ),
                                                                get_general_paths(INCIDENT_FIELDS_DIR, pack_to_create)):
-                for _id, data in (arr[0].items() if arr and isinstance(arr, list) else {}):
+                for _id, data in (arr[0] if arr and isinstance(arr, list) else {}).items():
                     if data.get('pack'):
                         packs_dict[data.get('pack')].setdefault('ContentItems', {}).setdefault('incidentFields',
                                                                                                []).append(_id)
@@ -2299,7 +2301,7 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, pack_to_c
                                                                        data_extraction_func=get_general_data,
                                                                        ),
                                                                get_general_paths(INDICATOR_FIELDS_DIR, pack_to_create)):
-                for _id, data in (arr[0].items() if arr and isinstance(arr, list) else {}):
+                for _id, data in (arr[0] if arr and isinstance(arr, list) else {}).items():
                     if data.get('pack'):
                         packs_dict[data.get('pack')].setdefault('ContentItems', {}).setdefault('indicatorFields',
                                                                                                []).append(_id)
@@ -2319,7 +2321,7 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, pack_to_c
                                                                        all_integrations=integration_list,
                                                                        ),
                                                                get_general_paths(INDICATOR_TYPES_DIR, pack_to_create)):
-                for _id, data in (arr[0].items() if arr and isinstance(arr, list) else {}):
+                for _id, data in (arr[0] if arr and isinstance(arr, list) else {}).items():
                     if data.get('pack'):
                         packs_dict[data.get('pack')].setdefault('ContentItems', {}).setdefault('indicatorTypes',
                                                                                                []).append(_id)
@@ -2349,7 +2351,7 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, pack_to_c
                                                                        print_logs=print_logs,
                                                                        ),
                                                                get_general_paths(LAYOUTS_DIR, pack_to_create)):
-                for _id, data in (arr[0].items() if arr and isinstance(arr, list) else {}):
+                for _id, data in (arr[0] if arr and isinstance(arr, list) else {}).items():
                     if data.get('pack'):
                         packs_dict[data.get('pack')].setdefault('ContentItems', {}).setdefault('layouts', []).append(
                             _id)
@@ -2369,7 +2371,7 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, pack_to_c
                                                                        data_extraction_func=get_report_data,
                                                                        ),
                                                                get_general_paths(REPORTS_DIR, pack_to_create)):
-                for _id, data in (arr[0].items() if arr and isinstance(arr, list) else {}):
+                for _id, data in (arr[0] if arr and isinstance(arr, list) else {}).items():
                     if data.get('pack'):
                         packs_dict[data.get('pack')].setdefault('ContentItems', {}).setdefault('reports', []).append(
                             _id)
@@ -2389,7 +2391,7 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, pack_to_c
                                                                        data_extraction_func=get_widget_data,
                                                                        ),
                                                                get_general_paths(WIDGETS_DIR, pack_to_create)):
-                for _id, data in (arr[0].items() if arr and isinstance(arr, list) else {}):
+                for _id, data in (arr[0] if arr and isinstance(arr, list) else {}).items():
                     if data.get('pack'):
                         packs_dict[data.get('pack')].setdefault('ContentItems', {}).setdefault('widgets', []).append(
                             _id)
@@ -2409,7 +2411,7 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, pack_to_c
                                                                        data_extraction_func=get_mapper_data,
                                                                        ),
                                                                get_general_paths(MAPPERS_DIR, pack_to_create)):
-                for _id, data in (arr[0].items() if arr and isinstance(arr, list) else {}):
+                for _id, data in (arr[0] if arr and isinstance(arr, list) else {}).items():
                     if data.get('pack'):
                         packs_dict[data.get('pack')].setdefault('ContentItems', {}).setdefault('mappers', []).append(
                             _id)
@@ -2429,7 +2431,7 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, pack_to_c
                                                                        data_extraction_func=get_list_data,
                                                                        ),
                                                                get_general_paths(LISTS_DIR, pack_to_create)):
-                for _id, data in (arr[0].items() if arr and isinstance(arr, list) else {}):
+                for _id, data in (arr[0] if arr and isinstance(arr, list) else {}).items():
                     if data.get('pack'):
                         packs_dict[data.get('pack')].setdefault('ContentItems', {}).setdefault('lists', []).append(_id)
                 lists_list.extend(arr)
@@ -2450,7 +2452,7 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, pack_to_c
                                                                        ),
                                                                get_general_paths(GENERIC_DEFINITIONS_DIR,
                                                                                  pack_to_create)):
-                for _id, data in (arr[0].items() if arr and isinstance(arr, list) else {}):
+                for _id, data in (arr[0] if arr and isinstance(arr, list) else {}).items():
                     if data.get('pack'):
                         packs_dict[data.get('pack')].setdefault('ContentItems', {}).setdefault('genericDefinitions',
                                                                                                []).append(_id)
@@ -2470,7 +2472,7 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, pack_to_c
                                                                        data_extraction_func=get_generic_module_data,
                                                                        ),
                                                                get_general_paths(GENERIC_MODULES_DIR, pack_to_create)):
-                for _id, data in (arr[0].items() if arr and isinstance(arr, list) else {}):
+                for _id, data in (arr[0] if arr and isinstance(arr, list) else {}).items():
                     if data.get('pack'):
                         packs_dict[data.get('pack')].setdefault('ContentItems', {}).setdefault('genericModules',
                                                                                                []).append(_id)
@@ -2489,7 +2491,7 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, pack_to_c
                                                                        ),
                                                                get_generic_entities_paths(GENERIC_TYPES_DIR,
                                                                                           pack_to_create)):
-                for _id, data in (arr[0].items() if arr and isinstance(arr, list) else {}):
+                for _id, data in (arr[0] if arr and isinstance(arr, list) else {}).items():
                     if data.get('pack'):
                         packs_dict[data.get('pack')].setdefault('ContentItems', {}).setdefault('genericTypes',
                                                                                                []).append(_id)
@@ -2510,7 +2512,7 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, pack_to_c
                                                                        ),
                                                                get_generic_entities_paths(GENERIC_FIELDS_DIR,
                                                                                           pack_to_create)):
-                for _id, data in (arr[0].items() if arr and isinstance(arr, list) else {}):
+                for _id, data in (arr[0] if arr and isinstance(arr, list) else {}).items():
                     if data.get('pack'):
                         packs_dict[data.get('pack')].setdefault('ContentItems', {}).setdefault('genericFields',
                                                                                                []).append(_id)
@@ -2528,7 +2530,7 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, pack_to_c
                                         print_logs=print_logs,
                                         ),
                                 get_general_paths(JOBS_DIR, pack_to_create)):
-                for _id, data in (arr[0].items() if arr and isinstance(arr, list) else {}):
+                for _id, data in (arr[0] if arr and isinstance(arr, list) else {}).items():
                     if data.get('pack'):
                         packs_dict[data.get('pack')].setdefault('ContentItems', {}).setdefault('jobs', []).append(_id)
                 jobs_list.extend(arr)
@@ -2547,7 +2549,7 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, pack_to_c
                                                                        ),
                                                                get_general_paths(PARSING_RULES_DIR,
                                                                                  pack_to_create)):
-                for _id, data in (arr[0].items() if arr and isinstance(arr, list) else {}):
+                for _id, data in (arr[0] if arr and isinstance(arr, list) else {}).items():
                     if data.get('pack'):
                         packs_dict[data.get('pack')].setdefault('ContentItems', {}).setdefault('parsingRules',
                                                                                                []).append(_id)
@@ -2569,7 +2571,7 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, pack_to_c
                                                                        ),
                                                                get_general_paths(MODELING_RULES_DIR,
                                                                                  pack_to_create)):
-                for _id, data in (arr[0].items() if arr and isinstance(arr, list) else {}):
+                for _id, data in (arr[0] if arr and isinstance(arr, list) else {}).items():
                     if data.get('pack'):
                         packs_dict[data.get('pack')].setdefault('ContentItems', {}).setdefault('modelingRules',
                                                                                                []).append(_id)
@@ -2591,7 +2593,7 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, pack_to_c
                                                                        ),
                                                                get_general_paths(CORRELATION_RULES_DIR,
                                                                                  pack_to_create)):
-                for _id, data in (arr[0].items() if arr and isinstance(arr, list) else {}):
+                for _id, data in (arr[0] if arr and isinstance(arr, list) else {}).items():
                     if data.get('pack'):
                         packs_dict[data.get('pack')].setdefault('ContentItems', {}).setdefault('correlationRules',
                                                                                                []).append(_id)
@@ -2613,7 +2615,7 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, pack_to_c
                                                                        ),
                                                                get_general_paths(XSIAM_DASHBOARDS_DIR,
                                                                                  pack_to_create)):
-                for _id, data in (arr[0].items() if arr and isinstance(arr, list) else {}):
+                for _id, data in (arr[0] if arr and isinstance(arr, list) else {}).items():
                     if data.get('pack'):
                         packs_dict[data.get('pack')].setdefault('ContentItems', {}).setdefault('xsiamdashboards',
                                                                                                []).append(_id)
@@ -2635,7 +2637,7 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, pack_to_c
                                                                        ),
                                                                get_general_paths(XSIAM_REPORTS_DIR,
                                                                                  pack_to_create)):
-                for _id, data in (arr[0].items() if arr and isinstance(arr, list) else {}):
+                for _id, data in (arr[0] if arr and isinstance(arr, list) else {}).items():
                     if data.get('pack'):
                         packs_dict[data.get('pack')].setdefault('ContentItems', {}).setdefault('xsiamreports',
                                                                                                []).append(_id)
@@ -2657,7 +2659,7 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, pack_to_c
                                                                        ),
                                                                get_general_paths(TRIGGER_DIR,
                                                                                  pack_to_create)):
-                for _id, data in (arr[0].items() if arr and isinstance(arr, list) else {}):
+                for _id, data in (arr[0] if arr and isinstance(arr, list) else {}).items():
                     if data.get('pack'):
                         packs_dict[data.get('pack')].setdefault('ContentItems', {}).setdefault('triggers',
                                                                                                []).append(_id)
@@ -2675,7 +2677,7 @@ def re_create_id_set(id_set_path: Optional[str] = DEFAULT_ID_SET_PATH, pack_to_c
                                         print_logs=print_logs,
                                         ),
                                 get_general_paths(WIZARDS_DIR, pack_to_create)):
-                for _id, data in (arr[0].items() if arr and isinstance(arr, list) else {}):
+                for _id, data in (arr[0] if arr and isinstance(arr, list) else {}).items():
                     if data.get('pack'):
                         packs_dict[data.get('pack')].setdefault('ContentItems', {}).setdefault('wizards', []).append(_id)
                 wizards_list.extend(arr)
