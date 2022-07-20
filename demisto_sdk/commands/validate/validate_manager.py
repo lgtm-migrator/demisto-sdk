@@ -38,6 +38,8 @@ from demisto_sdk.commands.common.hook_validations.correlation_rule import \
     CorrelationRuleValidator
 from demisto_sdk.commands.common.hook_validations.dashboard import \
     DashboardValidator
+from demisto_sdk.commands.common.hook_validations.deprecation import \
+    DeprecationValidator
 from demisto_sdk.commands.common.hook_validations.description import \
     DescriptionValidator
 from demisto_sdk.commands.common.hook_validations.generic_definition import \
@@ -170,6 +172,8 @@ class ValidateManager:
                                                    id_set_file=self.id_set_file,
                                                    json_file_path=json_file_path,
                                                    specific_validations=self.specific_validations) if validate_id_set else None
+
+        self.deprecation_validator = DeprecationValidator(id_set_file=self.id_set_file)
 
         try:
             self.git_util = GitUtil(repo=Content.git())
@@ -629,7 +633,7 @@ class ValidateManager:
             return self.validate_report(structure_validator, pack_error_ignore_list)
 
         elif file_type == FileType.PLAYBOOK:
-            return self.validate_playbook(structure_validator, pack_error_ignore_list, file_type)
+            return self.validate_playbook(structure_validator, pack_error_ignore_list, file_type, is_modified)
 
         elif file_type == FileType.INTEGRATION:
             return all([self.validate_integration(structure_validator, pack_error_ignore_list, is_modified,
@@ -954,11 +958,12 @@ class ValidateManager:
                                                                      specific_validations=self.specific_validations)
         return release_notes_config_validator.is_file_valid()
 
-    def validate_playbook(self, structure_validator, pack_error_ignore_list, file_type):
+    def validate_playbook(self, structure_validator, pack_error_ignore_list, file_type, is_modified):
         playbook_validator = PlaybookValidator(structure_validator, ignored_errors=pack_error_ignore_list,
                                                print_as_warnings=self.print_ignored_errors,
                                                json_file_path=self.json_file_path,
-                                               validate_all=self.validate_all)
+                                               validate_all=self.validate_all,
+                                               deprecation_validator=self.deprecation_validator)
 
         deprecated_result = self.check_and_validate_deprecated(file_type=file_type,
                                                                file_path=structure_validator.file_path,
@@ -970,14 +975,16 @@ class ValidateManager:
             return deprecated_result
 
         return playbook_validator.is_valid_playbook(validate_rn=False,
-                                                    id_set_file=self.id_set_file)
+                                                    id_set_file=self.id_set_file,
+                                                    is_modified=is_modified)
 
     def validate_integration(self, structure_validator, pack_error_ignore_list, is_modified, file_type):
         integration_validator = IntegrationValidator(structure_validator, ignored_errors=pack_error_ignore_list,
                                                      print_as_warnings=self.print_ignored_errors,
                                                      skip_docker_check=self.skip_docker_checks,
                                                      json_file_path=self.json_file_path,
-                                                     validate_all=self.validate_all
+                                                     validate_all=self.validate_all,
+                                                     deprecation_validator=self.deprecation_validator
                                                      )
 
         deprecated_result = self.check_and_validate_deprecated(file_type=file_type,
@@ -1004,7 +1011,8 @@ class ValidateManager:
                                            print_as_warnings=self.print_ignored_errors,
                                            skip_docker_check=self.skip_docker_checks,
                                            json_file_path=self.json_file_path,
-                                           validate_all=self.validate_all)
+                                           validate_all=self.validate_all,
+                                           deprecation_validator=self.deprecation_validator)
 
         deprecated_result = self.check_and_validate_deprecated(file_type=file_type,
                                                                file_path=structure_validator.file_path,
