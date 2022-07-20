@@ -877,6 +877,7 @@ class LintManager:
             if not (isinstance(json_contents, list)):
                 json_contents = []
         else:
+            print("Not os.path.exists(self.json_file_path) and the output file should be empty")
             json_contents = []
         logger.info('Collecting results to write to file')
         # format all linters to JSON format -
@@ -893,7 +894,6 @@ class LintManager:
             elif check.get('linter') == 'XSOAR_linter':
                 self.xsoar_linter_error_formatter(check, json_contents)
         with open(self.json_file_path, 'w+') as f:
-            print("open output file with w+ flag was executed")
             json.dump(json_contents, f, indent=4)
 
         logger.info(f'Logs saved to {self.json_file_path}')
