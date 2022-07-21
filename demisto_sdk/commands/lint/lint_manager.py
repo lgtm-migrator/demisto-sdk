@@ -875,9 +875,10 @@ class LintManager:
         if os.path.exists(self.json_file_path):
             json_contents = get_json(self.json_file_path)
             if not (isinstance(json_contents, list)):
+                print("if not (isinstance(json_contents, list)):")
                 json_contents = []
         else:
-            print("Not os.path.exists(self.json_file_path) and the output file should be empty")
+            print("Else os.path.exists(self.json_file_path)")
             json_contents = []
         logger.info('Collecting results to write to file')
         # format all linters to JSON format -
