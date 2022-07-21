@@ -872,19 +872,18 @@ class LintManager:
         if not self.json_file_path:
             return
 
-        logger.debug(f'################### json file path {self.json_file_path} ##############################')
         if os.path.exists(self.json_file_path):
             json_contents = get_json(self.json_file_path)
             if not (isinstance(json_contents, list)):
-                logger.debug(f'################### 1 ##############################')
                 json_contents = []
         else:
-            logger.debug(f'################### 2 ##############################')
             json_contents = []
         logger.info('Collecting results to write to file')
+        logger.debug(f'{json_contents=}')
         # format all linters to JSON format -
         # if any additional linters are added, please add a formatting function here
         for check in self.linters_error_list:
+            logger.debug(f'################################{json_contents=}##############################')
             if check.get('linter') == 'flake8':
                 self.flake8_error_formatter(check, json_contents)
             elif check.get('linter') == 'mypy':
