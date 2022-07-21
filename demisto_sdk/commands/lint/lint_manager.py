@@ -872,13 +872,15 @@ class LintManager:
         if not self.json_file_path:
             return
 
+        logger.debug(f'################### json file path {self.json_file_path} ##############################')
         if os.path.exists(self.json_file_path):
             json_contents = get_json(self.json_file_path)
             if not (isinstance(json_contents, list)):
-                print("if not (isinstance(json_contents, list)):")
+                logger.debug(f'################### 1 ##############################')
                 json_contents = []
         else:
-            print("Else os.path.exists(self.json_file_path)")
+            logger.debug(f'################### 2 ##############################')
+
             json_contents = []
         logger.info('Collecting results to write to file')
         # format all linters to JSON format -
