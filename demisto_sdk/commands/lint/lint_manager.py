@@ -880,7 +880,6 @@ class LintManager:
                 json_contents = []
         else:
             logger.debug(f'################### 2 ##############################')
-
             json_contents = []
         logger.info('Collecting results to write to file')
         # format all linters to JSON format -
