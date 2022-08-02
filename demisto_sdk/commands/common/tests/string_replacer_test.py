@@ -41,6 +41,8 @@ class StringReplacerContextManager:
             (f'hello world', {}, 'hello world'),
             (f'{STRING_REPLACER_PREFIX}hello world', {}, f'{STRING_REPLACER_PREFIX}hello world'),
             (f'hello {STRING_REPLACER_PREFIX}world', {'world': 'planet'}, 'hello planet'),
+            (f'{STRING_REPLACER_PREFIX}hello {STRING_REPLACER_PREFIX}world', {'hello': 'hey',
+                                                                              'world': 'planet'}, 'hey planet'),
             # todo more complicated tests, multiple replacements, recursion
     )
 )
