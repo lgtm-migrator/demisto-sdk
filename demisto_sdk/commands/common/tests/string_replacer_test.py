@@ -36,10 +36,26 @@ class StringReplacerContextManager:
     (
             (f'{STRING_REPLACER_PREFIX}hello world', {'hello': 'hey'}, 'hey world'),
             (f'{STRING_REPLACER_PREFIX}hello world', {'what\'s up': 'hey'}, f'{STRING_REPLACER_PREFIX}hello world'),
+            (f'{STRING_REPLACER_PREFIX}hello world', {'hello': ''}, ' world'),
             (f'hello world', {'hello': 'hey'}, 'hello world'),
             (f'hello world', {}, 'hello world'),
-            (f'hello world', {'world': 'planet'}, 'hello world'),
-    ))
+            (f'{STRING_REPLACER_PREFIX}hello world', {}, f'{STRING_REPLACER_PREFIX}hello world'),
+            (f'hello {STRING_REPLACER_PREFIX}world', {'world': 'planet'}, 'hello planet'),
+            # todo more complicated tests, multiple replacements, recursion
+            # todo more complicated tests, multiple replacements, recursion
+    ),
+)
 def test_replace(text: str, replacements: dict, expected: str):
     with StringReplacerContextManager(replacements):
         assert StringReplacer.replace(text) == expected
+
+
+def test_default_dict_values_exclude_prefix():
+    for key in StringReplacer.DICTIONARY:
+        assert not key.startswith(STRING_REPLACER_PREFIX)
+        assert (re.escape(STRING_REPLACER_PREFIX + key) in StringReplacer.REPLACEMENTS)
+
+
+def test_default_replacement_values_include_prefix():
+    for key in StringReplacer.REPLACEMENTS:
+        assert key.startswith(re.escape(STRING_REPLACER_PREFIX))
