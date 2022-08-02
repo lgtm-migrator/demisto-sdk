@@ -42,8 +42,7 @@ class StringReplacerContextManager:
             (f'{STRING_REPLACER_PREFIX}hello world', {}, f'{STRING_REPLACER_PREFIX}hello world'),
             (f'hello {STRING_REPLACER_PREFIX}world', {'world': 'planet'}, 'hello planet'),
             # todo more complicated tests, multiple replacements, recursion
-            # todo more complicated tests, multiple replacements, recursion
-    ),
+    )
 )
 def test_replace(text: str, replacements: dict, expected: str):
     with StringReplacerContextManager(replacements):
