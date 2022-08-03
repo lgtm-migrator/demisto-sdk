@@ -879,7 +879,7 @@ class LintManager:
         else:
             json_contents = []
         logger.info('Collecting results to write to file')
-        logger.debug(f'{json_contents=}')
+        logger.debug(f'Here should be empty, {json_contents=}')
         # format all linters to JSON format -
         # if any additional linters are added, please add a formatting function here
         for check in self.linters_error_list:
