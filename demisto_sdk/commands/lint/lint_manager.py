@@ -880,10 +880,11 @@ class LintManager:
             json_contents = []
         logger.info('Collecting results to write to file')
         logger.debug(f'Here should be empty, {json_contents=}')
+        logger.debug(f'$$$$ {type(self.linters_error_list)}')
+        logger.debug(f'$$$$ {self.linters_error_list=}')  # seems to be empty
         # format all linters to JSON format -
         # if any additional linters are added, please add a formatting function here
         for check in self.linters_error_list:
-            logger.debug(f'################################{json_contents=}##############################')
             if check.get('linter') == 'flake8':
                 self.flake8_error_formatter(check, json_contents)
             elif check.get('linter') == 'mypy':
