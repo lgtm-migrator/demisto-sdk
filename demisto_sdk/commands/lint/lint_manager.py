@@ -602,12 +602,15 @@ class LintManager:
             return_exit_code(int): exit code will indicate which lint or test failed
         """
         for check in ["flake8", "XSOAR_linter", "bandit", "mypy", "vulture"]:
+            logger.debug(f'In func "report_failed_lint_checks" {check=},'
+                         f'{EXIT_CODES[check]=}, {return_exit_code=}')
             if EXIT_CODES[check] & return_exit_code:
                 sentence = f" {check.capitalize()} errors "
                 print(f"\n{Colors.Fg.red}{'#' * len(sentence)}{Colors.reset}")
                 print(f"{Colors.Fg.red}{sentence}{Colors.reset}")
                 print(f"{Colors.Fg.red}{'#' * len(sentence)}{Colors.reset}\n")
                 for fail_pack in lint_status[f"fail_packs_{check}"]:
+                    logger.debug(f'{fail_pack=}')
                     print(f"{Colors.Fg.red}{pkgs_status[fail_pack]['pkg']}{Colors.reset}")
                     print(pkgs_status[fail_pack][f"{check}_errors"])
                     self.linters_error_list.append({
@@ -616,6 +619,7 @@ class LintManager:
                         'type': 'error',
                         'messages': pkgs_status[fail_pack][f"{check}_errors"]
                     })
+                    logger.debug(f'{self.linters_error_list=}')
 
         for check in ["pylint", "pwsh_analyze", "pwsh_test"]:
             check_str = check.capitalize().replace('_', ' ')
@@ -641,12 +645,15 @@ class LintManager:
         """
         if not all_packs:
             for check in ["flake8", "XSOAR_linter", "bandit", "mypy", "vulture"]:
+                logger.debug(f'In func "report_warning_lint_checks" {check=},'
+                             f'{EXIT_CODES[check]=}, {return_warning_code=}')
                 if EXIT_CODES[check] & return_warning_code:
                     sentence = f" {check.capitalize()} warnings "
                     print(f"\n{Colors.Fg.orange}{'#' * len(sentence)}{Colors.reset}")
                     print(f"{Colors.Fg.orange}{sentence}{Colors.reset}")
                     print(f"{Colors.Fg.orange}{'#' * len(sentence)}{Colors.reset}\n")
                     for fail_pack in lint_status[f"warning_packs_{check}"]:
+                        logger.debug(f'{fail_pack=}')
                         print(f"{Colors.Fg.orange}{pkgs_status[fail_pack]['pkg']}{Colors.reset}")
                         print(pkgs_status[fail_pack][f"{check}_warnings"])
                         self.linters_error_list.append({
@@ -655,6 +662,7 @@ class LintManager:
                             'type': 'warning',
                             'messages': pkgs_status[fail_pack][f"{check}_warnings"]
                         })
+                        logger.debug(f'{self.linters_error_list=}')
 
     def report_unit_tests(self, lint_status: dict, pkgs_status: dict, return_exit_code: int):
         """ Log failed unit-tests , if verbosity specified will log also success unit-tests
@@ -879,9 +887,6 @@ class LintManager:
         else:
             json_contents = []
         logger.info('Collecting results to write to file')
-        logger.debug(f'Here should be empty, {json_contents=}')
-        logger.debug(f'$$$$ {type(self.linters_error_list)}')
-        logger.debug(f'$$$$ {self.linters_error_list=}')  # seems to be empty
         # format all linters to JSON format -
         # if any additional linters are added, please add a formatting function here
         for check in self.linters_error_list:
