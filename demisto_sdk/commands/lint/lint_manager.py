@@ -604,7 +604,7 @@ class LintManager:
         for check in ["flake8", "XSOAR_linter", "bandit", "mypy", "vulture"]:
             logger.debug(f'In func "report_failed_lint_checks" {check=},'
                          f'{EXIT_CODES[check]=}, {return_exit_code=}')
-            if EXIT_CODES[check] & return_exit_code:
+            if EXIT_CODES[check]:
                 sentence = f" {check.capitalize()} errors "
                 print(f"\n{Colors.Fg.red}{'#' * len(sentence)}{Colors.reset}")
                 print(f"{Colors.Fg.red}{sentence}{Colors.reset}")
