@@ -1475,7 +1475,7 @@ def find_type(
         if ('transformer' in _dict and 'keyTypeMap' in _dict) or 'mapping' in _dict:
             if _dict.get('type') and _dict.get('type') == 'classification':
                 return FileType.CLASSIFIER
-            elif _dict.get('type') and 'mapping' in _dict.get('type'):
+            elif 'mapping' in _dict.get('type', ''):
                 return FileType.MAPPER
             return None
 
@@ -2506,7 +2506,8 @@ def get_current_repo() -> Tuple[str, str, str]:
         return "Unknown source", '', ''
 
 
-def get_item_marketplaces(item_path: str, item_data: Dict = None, packs: Dict[str, Dict] = None, item_type: str = None) -> List:
+def get_item_marketplaces(item_path: str, item_data: Dict = None, packs: Dict[str, Dict] = None,
+                          item_type: str = None) -> List:
     """
     Return the supporting marketplaces of the item.
 
@@ -2878,7 +2879,7 @@ def get_display_name(file_path, file_data={}) -> str:
 
 
 def get_invalid_incident_fields_from_mapper(
-    mapper_incident_fields: Dict[str, Dict], mapping_type: str, content_fields: List
+        mapper_incident_fields: Dict[str, Dict], mapping_type: str, content_fields: List
 ) -> List[str]:
     """
     Get a list of incident fields which are not part of the content items (not part of id_json) from a specific
