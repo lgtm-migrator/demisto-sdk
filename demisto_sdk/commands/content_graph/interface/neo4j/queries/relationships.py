@@ -81,7 +81,7 @@ MATCH (content_item:{ContentTypes.BASE_CONTENT}{{
     marketplaces: rel_data.source_marketplaces
 }})
 MATCH (target:{ContentTypes.PACK}{{node_id: rel_data.target}})
-MATCH (source)-[r:{Rel.IN_PACK}]->(target)
+MERGE (source)-[r:{Rel.IN_PACK}]->(target)
 RETURN count(r) AS relationships_merged
 """
 
