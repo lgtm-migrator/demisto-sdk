@@ -17,7 +17,7 @@ from demisto_sdk.commands.common.constants import (
     PACK_VERIFY_KEY, PARSING_RULES_DIR, PLAYBOOKS_DIR, PRE_PROCESS_RULES_DIR,
     RELEASE_NOTES_DIR, REPORTS_DIR, SCRIPTS_DIR, TEST_PLAYBOOKS_DIR, TOOLS_DIR,
     TRIGGER_DIR, WIDGETS_DIR, WIZARDS_DIR, XSIAM_DASHBOARDS_DIR,
-    XSIAM_REPORTS_DIR, FileType)
+    XSIAM_REPORTS_DIR, FileType, MarketplaceVersions)
 from demisto_sdk.commands.common.content.objects.pack_objects import (
     AgentTool, AuthorImage, Classifier, ClassifierMapper, Connection,
     Contributors, CorrelationRule, Dashboard, DocFile, GenericDefinition,
@@ -44,8 +44,10 @@ class Pack:
         # in case the given path are a Pack and not zipped pack - we init the metadata from the pack
         if not str(path).endswith('.zip'):
             self._metadata = PackMetaData(self._path.joinpath('metadata.json'))
-        self._filter_items_by_id_set = False
+        self._filter_packs = False
         self._pack_info_from_id_set: Dict[Any, Any] = {}
+        self._marketplace = MarketplaceVersions.XSOAR.value
+        self._use_graph = False
 
     def _content_files_list_generator_factory(self, dir_name: str, suffix: str) -> Iterator[Any]:
         """Generic content objects iterable generator
@@ -63,11 +65,11 @@ class Pack:
             # skip content items that are not displayed in the id set, if the corresponding flag is used,
             # We excluding ReleaseNotes and TestPlaybooks, because they missing from the id set
             # but are needed in the pack's zip.
-            if self._filter_items_by_id_set and content_object.type().value not in [FileType.RELEASE_NOTES.value,
-                                                                                    FileType.RELEASE_NOTES_CONFIG.value,
-                                                                                    FileType.TEST_PLAYBOOK.value,
-                                                                                    FileType.TEST_SCRIPT.value,
-                                                                                    ]:
+            if self._filter_packs and content_object.type().value not in [FileType.RELEASE_NOTES.value,
+                                                                          FileType.RELEASE_NOTES_CONFIG.value,
+                                                                          FileType.TEST_PLAYBOOK.value,
+                                                                          FileType.TEST_SCRIPT.value,
+                                                                          ]:
 
                 object_id = content_object.get_id()
                 if is_object_in_id_set(object_id, content_object.type().value, self._pack_info_from_id_set):
@@ -335,12 +337,28 @@ class Pack:
         return obj
 
     @property
-    def filter_items_by_id_set(self) -> bool:
-        return self._filter_items_by_id_set
+    def filter_packs(self) -> bool:
+        return self._filter_packs
 
-    @filter_items_by_id_set.setter
-    def filter_items_by_id_set(self, filter_by_id_set: bool):
-        self._filter_items_by_id_set = filter_by_id_set
+    @filter_packs.setter
+    def filter_packs(self, filter_pacs: bool):
+        self._filter_packs = filter_pacs
+        
+    @property
+    def use_graph(self) -> bool:
+        return self._use_graph
+
+    @use_graph.setter
+    def use_graph(self, use_graph: bool):
+        self._use_graph = use_graph
+
+    @property
+    def marketplace(self) -> str:
+        return self._marketplace
+
+    @marketplace.setter
+    def marketplace(self, marketplace: str = MarketplaceVersions.XSOAR.value):
+        self._marketplace = marketplace
 
     @property
     def pack_info_from_id_set(self) -> dict:

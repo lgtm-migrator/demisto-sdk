@@ -30,6 +30,8 @@ from demisto_sdk.commands.common.content.objects.abstract_objects.text_object im
     TextObject
 from demisto_sdk.commands.common.content.objects.pack_objects import (
     JSONContentObject, Script, YAMLContentObject, YAMLContentUnifiedObject)
+
+from demisto_sdk.commands.content_graph.neo4j_content_graph_builder import load_content_graph
 from demisto_sdk.commands.common.tools import (alternate_item_fields,
                                                arg_to_list, open_id_set_file,
                                                should_alternate_field_by_item)
@@ -56,10 +58,23 @@ EX_FAIL = 1
 
 
 class ArtifactsManager:
-    def __init__(self, artifacts_path: str, zip: bool, packs: bool, content_version: str, suffix: str,
-                 cpus: int, marketplace: str = MarketplaceVersions.XSOAR.value, id_set_path: str = '',
-                 pack_names: str = 'all', signature_key: str = '', sign_directory: Path = None,
-                 remove_test_playbooks: bool = True, filter_by_id_set: bool = False, alternate_fields: bool = False):
+    def __init__(
+            self,
+            artifacts_path: str,
+            zip: bool,
+            packs: bool,
+            content_version: str,
+            suffix: str,
+            cpus: int, marketplace: str = MarketplaceVersions.XSOAR.value,
+            id_set_path: str = '',
+            pack_names: str = 'all',
+            signature_key: str = '',
+            sign_directory: Path = None,
+            remove_test_playbooks: bool = True,
+            filter_packs: bool = False,
+            alternate_fields: bool = False,
+            use_graph=False,
+    ):
         """ Content artifacts configuration
 
         Args:
@@ -89,7 +104,7 @@ class ArtifactsManager:
         self.signDirectory = sign_directory
         self.remove_test_playbooks = remove_test_playbooks
         self.marketplace = marketplace.lower()
-        self.filter_by_id_set = filter_by_id_set
+        self.filter_packs = filter_packs
         self.pack_names = arg_to_list(pack_names)
         self.packs_section_from_id_set: dict = {}
         self.alternate_fields = alternate_fields
@@ -100,9 +115,14 @@ class ArtifactsManager:
         self.content_all_path = self.artifacts_path / 'all_content'
         self.content_uploadable_zips_path = self.artifacts_path / 'uploadable_packs'
 
-        if self.filter_by_id_set or self.alternate_fields:
-            self.id_set = open_id_set_file(id_set_path)
-
+        self.use_graph = use_graph
+        if self.filter_packs or self.alternate_fields:
+            if self.use_graph:
+                use_docker = not os.getenv('CI', False)
+                self.content_graph = load_content_graph(use_docker=use_docker, keep_service=True)
+            else:
+                self.id_set = open_id_set_file(id_set_path)
+        
         # inits
         self.content = Content.from_cwd()
         self.execution_start = time.time()
@@ -110,13 +130,16 @@ class ArtifactsManager:
         self.packs = self.content.packs
         self.exit_code = EX_SUCCESS
 
-        if self.filter_by_id_set:
-            self.packs_section_from_id_set = self.id_set.get('Packs', {})
-            if self.pack_names == ['all']:
-                self.pack_names = list(self.packs_section_from_id_set.keys())
+        if self.filter_packs:
+            if self.use_graph:
+                self.packs_from_graph = self.content_graph.get_all_pack_names(self.marketplace)
             else:
-                self.pack_names = list(set(self.packs_section_from_id_set.keys()).intersection(set(self.pack_names)))
-
+                self.packs_section_from_id_set = self.id_set.get('Packs', {})
+                if self.pack_names == ['all']:
+                    self.pack_names = list(self.packs_section_from_id_set.keys())
+                else:
+                    self.pack_names = list(set(self.packs_section_from_id_set.keys()).intersection(set(self.pack_names)))
+        
     def create_content_artifacts(self) -> int:
         with ArtifactsDirsHandler(self), ProcessPoolHandler(self) as pool:
             futures: List[ProcessFuture] = []
@@ -712,7 +735,8 @@ def dump_pack(artifact_manager: ArtifactsManager, pack: Pack) -> ArtifactsReport
     pack_report = ArtifactsReport(f"Pack {pack.id}:")
 
     pack.metadata.load_user_metadata(pack.id, pack.path.name, pack.path, logger)
-    pack.filter_items_by_id_set = artifact_manager.filter_by_id_set
+    pack.filter_packs = artifact_manager.filter_packs
+    pack.marketplace = artifact_manager.marketplace
     pack.pack_info_from_id_set = artifact_manager.packs_section_from_id_set
     content_items_handler = ContentItemsHandler(artifact_manager.id_set, artifact_manager.alternate_fields)
     is_feed_pack = False
@@ -831,7 +855,7 @@ def dump_pack(artifact_manager: ArtifactsManager, pack: Pack) -> ArtifactsReport
         pack_report += ObjectReport(pack.metadata, content_packs=True)
         pack.metadata.content_items = content_items_handler.content_items
         pack.metadata.server_min_version = pack.metadata.server_min_version or content_items_handler.server_min_version
-        if artifact_manager.id_set_path and not artifact_manager.filter_by_id_set:
+        if artifact_manager.id_set_path and not artifact_manager.filter_packs:
             # Dependencies can only be done when id_set file is given.
             pack.metadata.handle_dependencies(pack.path.name, artifact_manager.id_set_path, logger)
         else:

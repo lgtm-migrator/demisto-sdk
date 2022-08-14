@@ -252,7 +252,7 @@ def print_success(success_str):
     print_color(success_str, LOG_COLORS.GREEN)
 
 
-def run_command(command, is_silenced=True, exit_on_error=True, cwd=None):
+def run_command(command: list | str, is_silenced=True, exit_on_error=True, cwd=None):
     """Run a bash command in the shell.
 
     Args:
@@ -264,10 +264,12 @@ def run_command(command, is_silenced=True, exit_on_error=True, cwd=None):
     Returns:
         string. The output of the command you are trying to execute.
     """
+    if isinstance(command, str):
+        command = shlex.split(command)
     if is_silenced:
-        p = Popen(command.split(), stdout=PIPE, stderr=PIPE, universal_newlines=True, cwd=cwd)
+        p = Popen(command, stdout=PIPE, stderr=PIPE, universal_newlines=True, cwd=cwd)
     else:
-        p = Popen(command.split(), cwd=cwd)  # type: ignore
+        p = Popen(command, cwd=cwd)  # type: ignore
 
     output, err = p.communicate()
     if err:

@@ -247,7 +247,7 @@ def test_create_content_artifacts_by_id_set(mock_git):
                                   suffix='',
                                   cpus=1,
                                   packs=False,
-                                  filter_by_id_set=True,
+                                  filter_packs=True,
                                   id_set_path=PARTIAL_ID_SET_PATH)
         exit_code = config.create_content_artifacts()
 

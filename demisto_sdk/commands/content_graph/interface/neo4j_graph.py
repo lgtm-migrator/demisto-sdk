@@ -1,4 +1,3 @@
-import logging
 import neo4j
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -9,12 +8,13 @@ from demisto_sdk.commands.content_graph.interface.neo4j.queries.constraints impo
 from demisto_sdk.commands.content_graph.interface.neo4j.queries.nodes import create_nodes
 from demisto_sdk.commands.content_graph.interface.neo4j.queries.relationships import create_relationships
 from demisto_sdk.commands.content_graph.interface.neo4j.queries.dependencies import create_pack_dependencies
+from demisto_sdk.commands.content_graph.interface.neo4j.queries.get_data import get_all_pack_names
 
 
 class Neo4jContentGraphInterface(ContentGraphInterface):
     def __init__(self, database_uri, auth: Tuple[str, str]) -> None:
         self.driver: neo4j.Neo4jDriver = neo4j.GraphDatabase.driver(database_uri, auth=auth)
-    
+
     def create_indexes_and_constraints(self) -> None:
         with self.driver.session() as session:
             tx: neo4j.Transaction = session.begin_transaction()
@@ -51,3 +51,18 @@ class Neo4jContentGraphInterface(ContentGraphInterface):
             tx.commit()
             tx.close()
         return result
+
+    def get_all_pack_names(self, marketplace: str) -> dict:
+        with self.driver.session() as session:
+            return session.read_transaction(get_all_pack_names, marketplace).data()
+        
+    def filter_by_marketplace(self, marketplace: str) -> neo4j.Result:
+        with self.driver.session() as session:
+            tx: neo4j.Transaction = session.begin_transaction()
+            filter_by_marketplace(tx)
+            tx.commit()
+            tx.close()
+
+
+
+        
