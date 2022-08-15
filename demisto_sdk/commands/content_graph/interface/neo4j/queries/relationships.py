@@ -2,7 +2,7 @@ import logging
 from neo4j import Transaction
 from typing import Any, Dict, List
 
-from demisto_sdk.commands.content_graph.constants import ContentTypes, Rel
+from demisto_sdk.commands.content_graph.constants import ContentTypes, Relationship
 from demisto_sdk.commands.content_graph.interface.neo4j.queries.common import run_query, labels_of
 
 
@@ -25,7 +25,7 @@ ON MATCH
         marketplaces = cmd.marketplaces, mp IN rel_data.source_marketplaces |
         CASE WHEN NOT mp IN cmd.marketplaces THEN marketplaces + mp ELSE marketplaces END
     )
-MERGE (integration)-[r:{Rel.HAS_COMMAND}{{deprecated: rel_data.deprecated}}]->(cmd)
+MERGE (integration)-[r:{Relationship.HAS_COMMAND}{{deprecated: rel_data.deprecated}}]->(cmd)
 
 RETURN count(r) AS relationships_merged
 """
@@ -42,7 +42,7 @@ MERGE (dependency:{ContentTypes.BASE_CONTENT}{{
 }})
 ON CREATE
     SET dependency.not_in_repository = true
-MERGE (content_item)-[r:{Rel.USES}]->(dependency)
+MERGE (content_item)-[r:{Relationship.USES}]->(dependency)
 ON CREATE
     SET r.mandatorily = rel_data.mandatorily
 ON MATCH
@@ -63,7 +63,7 @@ MERGE (dependency:{ContentTypes.COMMAND_OR_SCRIPT}{{
 }})
 ON CREATE
     SET dependency.not_in_repository = true
-MERGE (content_item)-[r:{Rel.USES}]->(dependency)
+MERGE (content_item)-[r:{Relationship.USES}]->(dependency)
 ON CREATE
     SET r.mandatorily = rel_data.mandatorily
 ON MATCH
@@ -81,7 +81,7 @@ MATCH (content_item:{ContentTypes.BASE_CONTENT}{{
     marketplaces: rel_data.source_marketplaces
 }})
 MATCH (target:{ContentTypes.PACK}{{node_id: rel_data.target}})
-MERGE (source)-[r:{Rel.IN_PACK}]->(target)
+MERGE (source)-[r:{Relationship.IN_PACK}]->(target)
 RETURN count(r) AS relationships_merged
 """
 
@@ -94,7 +94,7 @@ MATCH (content_item:{ContentTypes.BASE_CONTENT}{{
     marketplaces: rel_data.source_marketplaces
 }})
 MERGE (target:{ContentTypes.TEST_PLAYBOOK}{{node_id: rel_data.target}})
-MERGE (source)-[r:{Rel.TESTED_BY}]->(target)
+MERGE (source)-[r:{Relationship.TESTED_BY}]->(target)
 RETURN count(r) AS relationships_merged
 """
 
@@ -104,10 +104,10 @@ logger = logging.getLogger('demisto-sdk')
 
 def create_relationships(
     tx: Transaction,
-    relationships: Dict[Rel, List[Dict[str, Any]]],
+    relationships: Dict[Relationship, List[Dict[str, Any]]],
 ) -> None:
-    if data := relationships.pop(Rel.HAS_COMMAND):
-        create_relationships_by_type(tx, Rel.HAS_COMMAND, data)
+    if data := relationships.pop(Relationship.HAS_COMMAND):
+        create_relationships_by_type(tx, Relationship.HAS_COMMAND, data)
 
     for relationship, data in relationships.items():
         create_relationships_by_type(tx, relationship, data)
@@ -115,18 +115,18 @@ def create_relationships(
 
 def create_relationships_by_type(
     tx: Transaction,
-    relationship: Rel,
+    relationship: Relationship,
     data: List[Dict[str, Any]],
 ) -> None:
-    if relationship == Rel.HAS_COMMAND:
+    if relationship == Relationship.HAS_COMMAND:
         query = HAS_COMMAND_RELATIONSHIPS_QUERY
-    elif relationship == Rel.USES:
+    elif relationship == Relationship.USES:
         query = USES_RELATIONSHIPS_QUERY
-    elif relationship == Rel.USES_COMMAND_OR_SCRIPT:
+    elif relationship == Relationship.USES_COMMAND_OR_SCRIPT:
         query = USES_RELATIONSHIPS_QUERY_FOR_COMMAND_OR_SCRIPT
-    elif relationship == Rel.IN_PACK:
+    elif relationship == Relationship.IN_PACK:
         query = IN_PACK_RELATIONSHIPS_QUERY
-    elif relationship == Rel.TESTED_BY:
+    elif relationship == Relationship.TESTED_BY:
         query = TESTED_BY_RELATIONSHIPS_QUERY
     else:
         # default query

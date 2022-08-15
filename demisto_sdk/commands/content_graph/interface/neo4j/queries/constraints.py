@@ -1,6 +1,6 @@
 from neo4j import Transaction
 
-from demisto_sdk.commands.content_graph.constants import ContentTypes, Rel
+from demisto_sdk.commands.content_graph.constants import ContentTypes, Relationship
 from demisto_sdk.commands.content_graph.interface.neo4j.queries.common import run_query
 
 
@@ -38,12 +38,12 @@ def create_node_property_existence_constraint(
 
 
 def create_relationships_constraints(tx: Transaction) -> None:
-    create_relationship_property_existence_constraint(tx, Rel.DEPENDS_ON, 'mandatorily')
+    create_relationship_property_existence_constraint(tx, Relationship.DEPENDS_ON, 'mandatorily')
 
 
 def create_relationship_property_existence_constraint(
     tx: Transaction,
-    rel: Rel,
+    rel: Relationship,
     prop: str,
 ) -> None:
     query = REL_PROPERTY_EXISTENCE_TEMPLATE.format(label=rel, prop=prop)

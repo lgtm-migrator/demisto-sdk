@@ -31,7 +31,7 @@ from demisto_sdk.commands.common.content.objects.abstract_objects.text_object im
 from demisto_sdk.commands.common.content.objects.pack_objects import (
     JSONContentObject, Script, YAMLContentObject, YAMLContentUnifiedObject)
 
-from demisto_sdk.commands.content_graph.neo4j_content_graph_builder import load_content_graph
+from demisto_sdk.commands.content_graph.content_graph_commands import load_content_graph
 from demisto_sdk.commands.common.tools import (alternate_item_fields,
                                                arg_to_list, open_id_set_file,
                                                should_alternate_field_by_item)
@@ -119,27 +119,25 @@ class ArtifactsManager:
         if self.filter_packs or self.alternate_fields:
             if self.use_graph:
                 use_docker = not os.getenv('CI', False)
-                self.content_graph = load_content_graph(use_docker=use_docker, keep_service=True)
+                self.graph_interface = load_content_graph(use_docker=use_docker, keep_service=True)
             else:
                 self.id_set = open_id_set_file(id_set_path)
-        
+
         # inits
         self.content = Content.from_cwd()
+        self.content.graph_interface = self.graph_interface
         self.execution_start = time.time()
 
         self.packs = self.content.packs
         self.exit_code = EX_SUCCESS
 
-        if self.filter_packs:
-            if self.use_graph:
-                self.packs_from_graph = self.content_graph.get_all_pack_names(self.marketplace)
+        if not self.use_graph and self.filter_packs:
+            self.packs_section_from_id_set = self.id_set.get('Packs', {})
+            if self.pack_names == ['all']:
+                self.pack_names = list(self.packs_section_from_id_set.keys())
             else:
-                self.packs_section_from_id_set = self.id_set.get('Packs', {})
-                if self.pack_names == ['all']:
-                    self.pack_names = list(self.packs_section_from_id_set.keys())
-                else:
-                    self.pack_names = list(set(self.packs_section_from_id_set.keys()).intersection(set(self.pack_names)))
-        
+                self.pack_names = list(set(self.packs_section_from_id_set.keys()).intersection(set(self.pack_names)))
+
     def create_content_artifacts(self) -> int:
         with ArtifactsDirsHandler(self), ProcessPoolHandler(self) as pool:
             futures: List[ProcessFuture] = []

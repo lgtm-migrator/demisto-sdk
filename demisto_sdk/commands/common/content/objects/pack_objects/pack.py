@@ -1,7 +1,8 @@
+import itertools
 import logging
 import subprocess
 from distutils.version import LooseVersion
-from typing import Any, Dict, Iterator, Optional, Union
+from typing import Any, Dict, Iterator, Optional, Union, Dict, List
 
 import demisto_client
 import regex
@@ -17,7 +18,8 @@ from demisto_sdk.commands.common.constants import (
     PACK_VERIFY_KEY, PARSING_RULES_DIR, PLAYBOOKS_DIR, PRE_PROCESS_RULES_DIR,
     RELEASE_NOTES_DIR, REPORTS_DIR, SCRIPTS_DIR, TEST_PLAYBOOKS_DIR, TOOLS_DIR,
     TRIGGER_DIR, WIDGETS_DIR, WIZARDS_DIR, XSIAM_DASHBOARDS_DIR,
-    XSIAM_REPORTS_DIR, FileType, MarketplaceVersions)
+    XSIAM_REPORTS_DIR, FileType, MarketplaceVersions, MarketplaceVersions)
+from demisto_sdk.commands.common.content.objects.abstract_objects.general_object import GeneralObject
 from demisto_sdk.commands.common.content.objects.pack_objects import (
     AgentTool, AuthorImage, Classifier, ClassifierMapper, Connection,
     Contributors, CorrelationRule, Dashboard, DocFile, GenericDefinition,
@@ -31,6 +33,10 @@ from demisto_sdk.commands.common.content.objects_factory import \
 from demisto_sdk.commands.common.tools import (get_demisto_version,
                                                is_object_in_id_set)
 from demisto_sdk.commands.test_content import tools
+from demisto_sdk.commands.content_graph.interface.neo4j_graph import Neo4jContentGraphInterface
+
+from demisto_sdk.commands.common.content.objects_factory import TYPE_CONVERSION_BY_FileType
+
 
 TURN_VERIFICATION_ERROR_MSG = "Can not set the pack verification configuration key,\nIn the server - go to Settings -> troubleshooting\
  and manually {action}."
@@ -39,15 +45,23 @@ SET_VERIFY_KEY_ACTION = f'set the key "{PACK_VERIFY_KEY}" to ' + '{}'
 
 
 class Pack:
-    def __init__(self, path: Union[str, Path]):
+    def __init__(self, path: Union[str, Path], content_items: Optional[Dict[str, List[Dict]]] = None,):
         self._path = Path(path)
+        self._content_items = content_items
         # in case the given path are a Pack and not zipped pack - we init the metadata from the pack
         if not str(path).endswith('.zip'):
             self._metadata = PackMetaData(self._path.joinpath('metadata.json'))
         self._filter_packs = False
         self._pack_info_from_id_set: Dict[Any, Any] = {}
-        self._marketplace = MarketplaceVersions.XSOAR.value
-        self._use_graph = False
+
+    def init_content_items(content_items: List[Dict]) -> Dict:
+        content_types = {}
+        for content_type, content_type_items in itertools.groupby(content_items, key=lambda x: x.get('content_type', '')):
+            # for example, key = Integration
+            # Integration(file_path)
+            cls_name: GeneralObject = TYPE_CONVERSION_BY_FileType.get(content_type.lower())
+            content_types[content_type] = [cls_name(g.get('file_path')) for g in content_type_items]
+        return content_types
 
     def _content_files_list_generator_factory(self, dir_name: str, suffix: str) -> Iterator[Any]:
         """Generic content objects iterable generator
@@ -343,22 +357,14 @@ class Pack:
     @filter_packs.setter
     def filter_packs(self, filter_pacs: bool):
         self._filter_packs = filter_pacs
-        
-    @property
-    def use_graph(self) -> bool:
-        return self._use_graph
-
-    @use_graph.setter
-    def use_graph(self, use_graph: bool):
-        self._use_graph = use_graph
 
     @property
-    def marketplace(self) -> str:
-        return self._marketplace
+    def graph_interface(self) -> Neo4jContentGraphInterface:
+        return self._graph_interface
 
-    @marketplace.setter
-    def marketplace(self, marketplace: str = MarketplaceVersions.XSOAR.value):
-        self._marketplace = marketplace
+    @graph_interface.setter
+    def graph_interface(self, graph_interface: Neo4jContentGraphInterface):
+        self._graph_interface = graph_interface
 
     @property
     def pack_info_from_id_set(self) -> dict:

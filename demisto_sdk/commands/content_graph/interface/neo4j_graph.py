@@ -1,14 +1,15 @@
 import neo4j
 from typing import Any, Dict, List, Optional, Tuple
+from demisto_sdk.commands.common.constants import MarketplaceVersions
 
-from demisto_sdk.commands.content_graph.constants import ContentTypes, Rel
+from demisto_sdk.commands.content_graph.constants import ContentTypes, Relationship
 from demisto_sdk.commands.content_graph.interface.graph import ContentGraphInterface
 from demisto_sdk.commands.content_graph.interface.neo4j.queries.indexes import create_indexes
 from demisto_sdk.commands.content_graph.interface.neo4j.queries.constraints import create_constraints
 from demisto_sdk.commands.content_graph.interface.neo4j.queries.nodes import create_nodes
 from demisto_sdk.commands.content_graph.interface.neo4j.queries.relationships import create_relationships
 from demisto_sdk.commands.content_graph.interface.neo4j.queries.dependencies import create_pack_dependencies
-from demisto_sdk.commands.content_graph.interface.neo4j.queries.get_data import get_all_pack_names
+from demisto_sdk.commands.content_graph.interface.neo4j.queries.get_data import get_all_content_items
 
 
 class Neo4jContentGraphInterface(ContentGraphInterface):
@@ -30,7 +31,7 @@ class Neo4jContentGraphInterface(ContentGraphInterface):
             tx.commit()
             tx.close()
 
-    def create_relationships(self, relationships: Dict[Rel, List[Dict[str, Any]]]) -> None:
+    def create_relationships(self, relationships: Dict[Relationship, List[Dict[str, Any]]]) -> None:
         with self.driver.session() as session:
             tx: neo4j.Transaction = session.begin_transaction()
             create_relationships(tx, relationships)
@@ -52,17 +53,7 @@ class Neo4jContentGraphInterface(ContentGraphInterface):
             tx.close()
         return result
 
-    def get_all_pack_names(self, marketplace: str) -> dict:
-        with self.driver.session() as session:
-            return session.read_transaction(get_all_pack_names, marketplace).data()
-        
-    def filter_by_marketplace(self, marketplace: str) -> neo4j.Result:
+    def get_all_content_items(self, marketplace: MarketplaceVersions) -> dict:
         with self.driver.session() as session:
             tx: neo4j.Transaction = session.begin_transaction()
-            filter_by_marketplace(tx)
-            tx.commit()
-            tx.close()
-
-
-
-        
+            return get_all_content_items(tx, marketplace)

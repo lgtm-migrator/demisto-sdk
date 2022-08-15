@@ -1,9 +1,9 @@
 import traceback
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from demisto_sdk.commands.common.tools import get_json, get_current_repo
-from demisto_sdk.commands.content_graph.constants import ContentTypes, Rel, PACK_METADATA_FILENAME
+from demisto_sdk.commands.content_graph.constants import REPO_PATH, ContentTypes, Relationship, PACK_METADATA_FILENAME
 from demisto_sdk.commands.content_graph.parsers.parser_factory import ParserFactory
 import demisto_sdk.commands.content_graph.parsers.base_content as base_content
 
@@ -15,7 +15,7 @@ class PackParser(base_content.BaseContentParser):
         self.path: Path = path
         self.metadata: Dict[str, Any] = get_json(path / PACK_METADATA_FILENAME)
         self.nodes: Dict[ContentTypes, List[Dict[str, Any]]] = {}
-        self.relationships: Dict[Tuple[ContentTypes, Rel, ContentTypes], List[Dict[str, Any]]] = {}
+        self.relationships: Dict[Tuple[ContentTypes, Relationship, ContentTypes], List[Dict[str, Any]]] = {}
 
     @property
     def node_id(self) -> str:
@@ -28,7 +28,7 @@ class PackParser(base_content.BaseContentParser):
     @property
     def deprecated(self) -> bool:
         return self.metadata.get('deprecated', False)
-    
+
     @property
     def marketplaces(self) -> List[str]:
         return self.metadata.get('marketplaces', [])
@@ -41,7 +41,7 @@ class PackParser(base_content.BaseContentParser):
 
     def add_content_item_relationships(self, parser: Any) -> None:
         parser.add_relationship(
-            Rel.IN_PACK,
+            Relationship.IN_PACK,
             target=self.node_id,
         )
         for k, v in parser.relationships.items():
@@ -53,14 +53,14 @@ class PackParser(base_content.BaseContentParser):
             'node_id': self.node_id,
             'id': self.pack_id,
             'name': self.metadata.get('name'),
-            'file_path': self.path.as_posix(),
+            'file_path': self.path.relative_to(REPO_PATH).as_posix(),
             'current_version': self.metadata.get('currentVersion'),
-            'source': list(get_current_repo()),
             'author': self.metadata.get('author'),
             'certification': 'certified' if self.metadata.get('support', '').lower() in ['xsoar', 'partner'] else '',
             'tags': self.metadata.get('tags', []),
             'use_cases': self.metadata.get('useCases', []),
             'categories': self.metadata.get('categories', []),
+            'content_type': self.content_type,
         }
         return pack_data | base_content_data
 
@@ -85,9 +85,9 @@ class PackSubGraphCreator:
     """
     @staticmethod
     def from_path(path: Path) -> Tuple[
-            Dict[ContentTypes, List[Dict[str, Any]]],
-            Dict[Rel, List[Dict[str, Any]]]
-        ]:
+        Dict[ContentTypes, List[Dict[str, Any]]],
+        Dict[Relationship, List[Dict[str, Any]]]
+    ]:
         """ Given a pack path, parses it into nodes and relationships. """
         try:
             pack_parser = PackParser(path)

@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Any, Dict, List
 
-from demisto_sdk.commands.content_graph.constants import ContentTypes, Rel
+from demisto_sdk.commands.content_graph.constants import ContentTypes, Relationship
 from demisto_sdk.commands.content_graph.parsers.integration_script import IntegrationScriptParser, IntegrationScriptUnifier
 
 
@@ -39,7 +39,7 @@ class IntegrationParser(IntegrationScriptParser):
             cmd_name = command_data.get('name')
             deprecated: bool = command_data.get('deprecated', False) or self.deprecated
             self.add_relationship(
-                Rel.HAS_COMMAND,
+                Relationship.HAS_COMMAND,
                 target=cmd_name,
                 deprecated=deprecated,
             )
@@ -67,4 +67,4 @@ class IntegrationParser(IntegrationScriptParser):
         api_modules = IntegrationScriptUnifier.check_api_module_imports(code).values()
         for api_module in api_modules:
             api_module_node_id = f'{ContentTypes.SCRIPT}:{api_module}'
-            self.add_relationship(Rel.IMPORTS, api_module_node_id)
+            self.add_relationship(Relationship.IMPORTS, api_module_node_id)

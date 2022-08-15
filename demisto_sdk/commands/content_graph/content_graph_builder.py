@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, List, Iterator, Dict
 
 
-from demisto_sdk.commands.content_graph.constants import PACKS_FOLDER, ContentTypes, Rel
+from demisto_sdk.commands.content_graph.constants import PACKS_FOLDER, ContentTypes, Relationship
 from demisto_sdk.commands.content_graph.interface.graph import ContentGraphInterface
 from demisto_sdk.commands.content_graph.parsers.pack import PackSubGraphCreator
 from demisto_sdk.commands.common.git_util import GitUtil
@@ -36,16 +36,12 @@ def dump_pickle(url: str, data: Any) -> None:
 
 
 class ContentGraphBuilder(ABC):
-    def __init__(self, repo_path: Path) -> None:
+    def __init__(self, repo_path: Path, content_graph: ContentGraphInterface) -> None:
         self.packs_path: Path = repo_path / PACKS_FOLDER
         self.nodes: Dict[ContentTypes, List[Dict[str, Any]]] = load_pickle(NODES_PKL_PATH.as_posix())
-        self.relationships: Dict[Rel, List[Dict[str, Any]]] = load_pickle(RELS_PKL_PATH.as_posix())
-
-    @property
-    @abstractmethod
-    def content_graph(self) -> ContentGraphInterface:
-        pass
-
+        self.relationships: Dict[Relationship, List[Dict[str, Any]]] = load_pickle(RELS_PKL_PATH.as_posix())
+        self.content_graph = content_graph
+    
     def parse_packs(self, packs_paths: Iterator[Path]) -> None:
         """ Parses packs into nodes and relationships by given paths. """
         if self.nodes and self.relationships:
@@ -58,7 +54,7 @@ class ContentGraphBuilder(ABC):
     def extend_graph_nodes_and_relationships(
         self,
         pack_nodes: Dict[ContentTypes, List[Dict[str, Any]]],
-        pack_relationships: Dict[Rel, List[Dict[str, Any]]],
+        pack_relationships: Dict[Relationship, List[Dict[str, Any]]],
     ) -> None:
         for content_type, parsed_data in pack_nodes.items():
             self.nodes.setdefault(content_type, []).extend(parsed_data)

@@ -10,9 +10,12 @@ from constants import NEO4J_PASSWORD, REPO_PATH
 logger = logging.getLogger('demisto-sdk')
 
 
+IS_NEO4J_ADMIN_AVAILABLE = run_command('neo4j-admin --version', cwd=REPO_PATH / 'neo4j', is_silenced=True) == 0
+
+
 def start_neo4j_service(use_docker: bool = True):
     if not use_docker:
-        run_command(f'neo4j-admin set-initial-password {NEO4J_PASSWORD}', cwd=REPO_PATH / 'neo4j', is_silenced=False)
+        neo4j_admin_command('set-initial-password', f'neo4j - admin set - initial - password {NEO4J_PASSWORD}')
         run_command('neo4j start', cwd=REPO_PATH / 'neo4j', is_silenced=False)
 
     else:
@@ -37,8 +40,8 @@ def stop_neo4j_service(use_docker: bool):
         run_command('docker-compose down', cwd=REPO_PATH / 'neo4j', is_silenced=False)
 
 
-def neo4j_admin_command(use_docker: bool, name: str, command: list):
-    if not use_docker:
+def neo4j_admin_command(name: str, command: str):
+    if IS_NEO4J_ADMIN_AVAILABLE:
         run_command(command, cwd=REPO_PATH / 'neo4j', is_silenced=False)
     else:
         docker_client = docker.from_env()
@@ -54,12 +57,11 @@ def neo4j_admin_command(use_docker: bool, name: str, command: list):
                                      )
 
 
-def dump(use_docker: bool):
-    command = ['neo4j-admin', 'dump', '--database=neo4j', f'--to={"/backups/content-graph.dump" if use_docker else REPO_PATH / "neo4" / "content-graph.dump"}']
-    neo4j_admin_command(use_docker, 'dump', command)
+def dump():
+    command = f'neo4j-admin dump --database=neo4j --to={"/backups/content-graph.dump" if IS_NEO4J_ADMIN_AVAILABLE else REPO_PATH / "neo4" / "content-graph.dump"}'
+    neo4j_admin_command('dump', command)
 
 
-def load(use_docker: bool):
-    command = ['neo4j-admin', 'load', '--database=neo4j',
-               f'--from={"/backups/content-graph.dump" if use_docker else REPO_PATH / "neo4" / "content-graph.dump"}']
-    neo4j_admin_command(use_docker, 'load', command)
+def load():
+    command = f'neo4j-admin load --database=neo4j --from={"/backups/content-graph.dump" if IS_NEO4J_ADMIN_AVAILABLE else REPO_PATH / "neo4" / "content-graph.dump"}'
+    neo4j_admin_command('load', command)

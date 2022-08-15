@@ -1,15 +1,14 @@
 from abc import abstractmethod
 from pathlib import Path
-from typing import Any, Dict, Optional, List, Union, Tuple
+from typing import Any, Dict, Optional, List, Union
 
 from demisto_sdk.commands.common.tools import (
-    get_current_repo,
     get_files_in_dir,
     get_json, get_yaml,
     get_yml_paths_in_dir
 )
 from demisto_sdk.commands.common.constants import DEFAULT_CONTENT_ITEM_TO_VERSION
-from demisto_sdk.commands.content_graph.constants import ContentTypes, Rel, UNIFIED_FILES_SUFFIXES
+from demisto_sdk.commands.content_graph.constants import REPO_PATH, ContentTypes, Relationship, UNIFIED_FILES_SUFFIXES
 import demisto_sdk.commands.content_graph.parsers.base_content as base_content
 
 
@@ -23,9 +22,10 @@ class ContentItemParser(base_content.BaseContentParser):
     Attributes:
         path (Path):
     """
+
     def __init__(self, path: Path) -> None:
         self.path: Path = path
-        self.relationships: Dict[Rel, List[Dict[str, Any]]] = {}
+        self.relationships: Dict[Relationship, List[Dict[str, Any]]] = {}
 
     @property
     def node_id(self) -> str:
@@ -65,8 +65,7 @@ class ContentItemParser(base_content.BaseContentParser):
             'deprecated': self.deprecated,
             'fromversion': self.fromversion,
             'toversion': self.toversion,
-            'source': list(get_current_repo()),
-            'file_path': self.path.as_posix(),
+            'file_path': self.path.relative_to(REPO_PATH).as_posix(),
         }
 
         return content_item_data | base_content_data
@@ -85,7 +84,7 @@ class ContentItemParser(base_content.BaseContentParser):
 
     def add_relationship(
         self,
-        relationship: Rel,
+        relationship: Relationship,
         target: str,
         **kwargs: Dict[str, Any],
     ) -> None:
@@ -100,10 +99,10 @@ class ContentItemParser(base_content.BaseContentParser):
 
     def add_dependency(self, dependency_id: str, dependency_type: Optional[ContentTypes] = None, is_mandatory: bool = True) -> None:
         if dependency_type is None:  # and self.content_type == ContentTypes.SCRIPT:
-            relationship = Rel.USES_COMMAND_OR_SCRIPT
+            relationship = Relationship.USES_COMMAND_OR_SCRIPT
             target = dependency_id
         else:
-            relationship = Rel.USES
+            relationship = Relationship.USES
             target = f'{dependency_type}:{dependency_id}'
 
         self.add_relationship(
@@ -142,12 +141,12 @@ class YAMLContentItemParser(ContentItemParser):
         return marketplaces
 
     def connect_to_tests(self) -> None:
-        tests_playbooks: List[str] =  self.yml_data.get('tests', [])
+        tests_playbooks: List[str] = self.yml_data.get('tests', [])
         for test_playbook_id in tests_playbooks:
             if 'no test' not in test_playbook_id.lower():
                 tpb_node_id = f'{ContentTypes.TEST_PLAYBOOK}:{test_playbook_id}'
                 self.add_relationship(
-                    Rel.TESTED_BY,
+                    Relationship.TESTED_BY,
                     target=tpb_node_id,
                 )
 
@@ -193,7 +192,7 @@ class JSONContentItemParser(ContentItemParser):
         if not (marketplaces := self.json_data.get('marketplaces', [])):
             return self.pack_marketplaces
         return marketplaces
-    
+
     def get_json(self) -> Dict[str, Any]:
         if self.path.is_dir():
             json_files_in_dir = get_files_in_dir(self.path.as_posix(), ['json'], False)

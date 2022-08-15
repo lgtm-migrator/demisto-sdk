@@ -3,7 +3,7 @@ from neo4j import Transaction
 from typing import Dict, Set
 
 from demisto_sdk.commands.common.constants import MarketplaceVersions, REPUTATION_COMMAND_NAMES
-from demisto_sdk.commands.content_graph.constants import ContentTypes, Rel
+from demisto_sdk.commands.content_graph.constants import ContentTypes, Relationship
 from demisto_sdk.commands.content_graph.interface.neo4j.queries.common import run_query
 
 
@@ -35,7 +35,7 @@ def update_marketplaces_property(tx: Transaction, marketplace: str) -> None:
     """
     query = f"""
         MATCH (content_item:{ContentTypes.BASE_CONTENT})
-                -[r:{Rel.USES}*{{mandatorily: true}}]->
+                -[r:{Relationship.USES}*{{mandatorily: true}}]->
                     (dependency:{ContentTypes.BASE_CONTENT})
         WHERE
             "{marketplace}" IN content_item.marketplaces
@@ -61,8 +61,8 @@ def update_marketplaces_property(tx: Transaction, marketplace: str) -> None:
 
 def create_depends_on_relationships(tx: Transaction) -> None:
     query = f"""
-        MATCH (pack_a:{ContentTypes.BASE_CONTENT})<-[:{Rel.IN_PACK}]-(a)
-            -[r:{Rel.USES}]->(b)-[:{Rel.IN_PACK}]->(pack_b:{ContentTypes.BASE_CONTENT})
+        MATCH (pack_a:{ContentTypes.BASE_CONTENT})<-[:{Relationship.IN_PACK}]-(a)
+            -[r:{Relationship.USES}]->(b)-[:{Relationship.IN_PACK}]->(pack_b:{ContentTypes.BASE_CONTENT})
         WHERE ANY(marketplace IN pack_a.marketplaces WHERE marketplace IN pack_b.marketplaces)
         AND pack_a.id <> pack_b.id
         AND NOT pack_a.id IN {IGNORED_PACKS_IN_DEPENDENCY_CALC}

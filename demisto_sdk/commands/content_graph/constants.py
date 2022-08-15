@@ -18,7 +18,7 @@ NEO4J_USERNAME = os.getenv('DEMISTO_SDK_NEO4J_USERNAME', 'neo4j')
 NEO4J_PASSWORD = os.getenv('DEMISTO_SDK_NEO4J_USERNAME', 'test')
 
 
-class Rel(enum.Enum):
+class Relationship(enum.Enum):
     USES = 'USES'
     USES_COMMAND_OR_SCRIPT = 'USES_COMMAND_OR_SCRIPT'
     DEPENDS_ON = 'DEPENDS_ON'
@@ -31,15 +31,15 @@ class Rel(enum.Enum):
         return self.value
 
     @staticmethod
-    def props_existence_constraints() -> Dict['Rel', List[str]]:
+    def props_existence_constraints() -> Dict['Relationship', List[str]]:
         constraints = {
-            Rel.DEPENDS_ON: ['mandatorily'],
+            Relationship.DEPENDS_ON: ['mandatorily'],
         }
         assert all(len(props) == 1 for props in constraints.values())  # constraints query limitation
         return constraints
 
 
-class ContentTypes(enum.Enum):
+class ContentTypes(str, enum.Enum):
     BASE_CONTENT = 'BaseContent'
     PACK = 'Pack'
     COMMAND_OR_SCRIPT = 'CommandOrScript'
@@ -73,9 +73,6 @@ class ContentTypes(enum.Enum):
     XSIAM_REPORT = 'XSIAMReport'
     TRIGGER = 'Trigger'
     WIZARD = 'Wizard'
-
-    def __str__(self) -> str:
-        return self.value
 
     @property
     def labels(self) -> List[str]:

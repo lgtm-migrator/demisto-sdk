@@ -1,6 +1,7 @@
 from __future__ import annotations
+import itertools
 
-from typing import Any, Iterator
+from typing import Any, Callable, Iterator, Optional
 
 from git import InvalidGitRepositoryError, Repo
 from wcmatch.pathlib import Path
@@ -8,7 +9,10 @@ from wcmatch.pathlib import Path
 from demisto_sdk.commands.common.constants import (DOCUMENTATION,
                                                    DOCUMENTATION_DIR,
                                                    PACKS_DIR,
-                                                   TEST_PLAYBOOKS_DIR)
+                                                   TEST_PLAYBOOKS_DIR,
+                                                   MarketplaceVersions,
+                                                   )
+from demisto_sdk.commands.common.content.objects.abstract_objects.general_object import GeneralObject
 from demisto_sdk.commands.common.content.objects.pack_objects.pack import Pack
 from demisto_sdk.commands.common.content.objects.pack_objects.playbook.playbook import \
     Playbook
@@ -19,6 +23,7 @@ from demisto_sdk.commands.common.content.objects.root_objects import (
 from demisto_sdk.commands.common.content.objects_factory import \
     path_to_pack_object
 
+from demisto_sdk.commands.content_graph.interface.neo4j_graph import ContentGraphInterface
 
 class Content:
     def __init__(self, path: str | Path):
@@ -34,7 +39,9 @@ class Content:
             1. Add attribute which init only changed objects by git.
         """
         self._path = Path(path)
-
+        self.graph_interface: Optional[ContentGraphInterface] = None
+        self.marketplace = MarketplaceVersions.XSOAR.value
+        
     @classmethod
     def from_cwd(cls) -> Content:
         """ Generate Content object from git or from current path.
@@ -105,6 +112,13 @@ class Content:
             2. Itrate over all packs.
             3. Only Pack stripped object created not on demend, In order to allow access to pack by id.
         """
+        if self.graph_interface:
+            packs = {}
+            all_content_items = self.graph_interface.get_all_content_items(self.marketplace)
+            for pack, content_items in all_content_items.items():
+                p = Pack(pack.get('file_path'), content_items)
+                pack[pack.get('name')] = p
+            return packs
         return {path.name: Pack(path) for path in (self._path / PACKS_DIR).glob("*/")}
 
     @property
@@ -129,3 +143,4 @@ class Content:
             descriptor_object = ContentDescriptor(path)
 
         return descriptor_object
+    
