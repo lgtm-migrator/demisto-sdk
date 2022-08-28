@@ -8,6 +8,7 @@ from demisto_sdk.commands.common.hook_validations.release_notes import \
 from demisto_sdk.commands.common.hook_validations.structure import \
     StructureValidator
 from demisto_sdk.commands.common.legacy_git_tools import git_path
+from demisto_sdk.commands.common.mardown_lint import has_markdown_lint_errors
 from demisto_sdk.commands.common.tools import get_dict_from_file
 from demisto_sdk.commands.update_release_notes.update_rn import UpdateRN
 from TestSuite.pack import Pack
@@ -63,6 +64,7 @@ def test_rn_master_diff(release_notes, expected_result, mocker):
     - Case 3: Should print nothing and return True
     """
     mocker.patch.object(ReleaseNotesValidator, '__init__', lambda a, b: None)
+    mocker.patch.object(ReleaseNotesValidator, 'has_no_markdown_lint_errors', return_value=True)
     ReleaseNotesValidator.ignored_errors = []
     validator = get_validator(release_notes)
     assert validator.is_file_valid() == expected_result
@@ -521,3 +523,22 @@ def test_validate_json_when_breaking_changes(release_notes_content, has_json, ch
 
     validator.release_notes_file_path = release_note.path
     assert validator.validate_json_when_breaking_changes() == expected_result
+
+
+@pytest.mark.parametrize('note, has_error', [('##NoSpace', True), ('No Issue', False)])
+def test_validate_release_notes_markdownlint(note, has_error, mocker, repo):
+    """
+    Given
+    - A release note.
+    When
+    - Run validate_json_when_breaking_changes validation.
+    Then
+    - Ensure that if the release note contains 'breaking change', there is also an appropriate json file.
+    """
+    mocker.patch.object(ReleaseNotesValidator, '__init__', lambda a, b: None)
+    validator = get_validator(note, MODIFIED_FILES)
+    pack = repo.create_pack('test_pack')
+    release_note = pack.create_release_notes(version='1.0.0', content=note)
+
+    validator.release_notes_file_path = release_note.path
+    assert has_error == has_markdown_lint_errors(release_note.path)
