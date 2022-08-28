@@ -63,7 +63,7 @@ def test_is_duplicate_description_given(pack, mocker):
 @pytest.mark.parametrize("file_input, result",
                          [("### Community Contributed Integration\n### OtherSection", False),
                           ("### partner Contributed Integration", False),
-                          ("### Other section", True)])
+                          ("\n### Other section\n", True)])
 def test_is_valid_file(integration, file_input, result):
     """
     Given

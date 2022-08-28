@@ -23,11 +23,11 @@ ALLOWED_IGNORE_ERRORS = [
     'MP106',
     'PA113', 'PA116', 'PA124', 'PA125', 'PA127', 'PA129',
     'PB104', 'PB105', 'PB106', 'PB110', 'PB111', 'PB112', 'PB114', 'PB115', 'PB116', 'PB107', 'PB118', 'PB119',
-    'RM100', 'RM102', 'RM104', 'RM106', 'RM108', 'RM110', 'RM112', 'RM113',
+    'RM100', 'RM102', 'RM104', 'RM106', 'RM108', 'RM110', 'RM112', 'RM113', 'RM114',
     'RP102', 'RP104',
     'SC100', 'SC101', 'SC105', 'SC106',
     'IM111',
-    'RN112',
+    'RN112', 'RN113',
 ]
 
 # predefined errors to be ignored in partner/community supported packs even if they do not appear in .pack-ignore
@@ -127,6 +127,8 @@ ERROR_CODE = {
     "invalid_description_name": {'code': "DS106", 'ui_applicable': False, 'related_field': ''},
     "description_contains_demisto_word": {'code': "DS107", 'ui_applicable': True,
                                           'related_field': 'detaileddescription'},
+    "description_lint_errors": {'code': "DS108", 'ui_applicable': True,
+                                'related_field': ''},
 
     # GF - Generic Fields
     "invalid_generic_field_group_value": {'code': "GF100", 'ui_applicable': False, 'related_field': 'group'},
@@ -361,6 +363,7 @@ ERROR_CODE = {
     "error_uninstall_node": {'code': "RM111", 'ui_applicable': False, 'related_field': ''},
     "invalid_readme_relative_url_error": {'code': "RM112", 'ui_applicable': False, 'related_field': ''},
     "copyright_section_in_readme_error": {'code': "RM113", 'ui_applicable': False, 'related_field': ''},
+    "readme_lint_errors": {'code': "RM114", 'ui_applicable': False, 'related_field': ''},
 
     # RN - Release Notes
     "missing_release_notes": {'code': "RN100", 'ui_applicable': False, 'related_field': ''},
@@ -376,6 +379,7 @@ ERROR_CODE = {
     "release_notes_config_file_missing_release_notes": {'code': "RN110", 'ui_applicable': False, 'related_field': ''},
     "release_notes_docker_image_not_match_yaml": {'code': "RN111", 'ui_applicable': False, 'related_field': ''},
     "release_notes_bc_json_file_missing": {'code': "RN112", 'ui_applicable': False, 'related_field': ''},
+    "release_notes_lint_errors": {'code': "RN113", 'ui_applicable': False, 'related_field': ''},
 
     # RP - Reputations (Indicator Types)
     "wrong_version_reputations": {'code': "RP100", 'ui_applicable': False, 'related_field': 'version'},
@@ -1344,6 +1348,19 @@ class Errors:
 
     @staticmethod
     @error_code_decorator
+    def release_notes_lint_errors(rn_file_name):
+        message_to_return = f'The {rn_file_name} release notes file is not linted properly'
+        return message_to_return\
+
+
+    @staticmethod
+    @error_code_decorator
+    def description_lint_errors(rn_file_name):
+        message_to_return = f'The {rn_file_name} description file is not linted properly'
+        return message_to_return
+
+    @staticmethod
+    @error_code_decorator
     def playbook_cant_have_rolename():
         return "Playbook can not have a rolename."
 
@@ -1403,7 +1420,7 @@ class Errors:
     @staticmethod
     @error_code_decorator
     def content_entity_version_not_match_playbook_version(
-        main_playbook: str, entities_names_and_version: str, main_playbook_version: str, content_sub_type: str
+            main_playbook: str, entities_names_and_version: str, main_playbook_version: str, content_sub_type: str
     ):
         return f"Playbook {main_playbook} with 'fromversion' {main_playbook_version} uses the following" \
                f" {content_sub_type} with an invalid 'fromversion': [{entities_names_and_version}]. " \
@@ -1828,6 +1845,12 @@ class Errors:
     def copyright_section_in_readme_error(line_nums):
         return f"Invalid keywords related to Copyrights (BSD, MIT, Copyright, proprietary) were found " \
                f"in lines: {line_nums}. Copyright section cannot be part of pack readme."
+
+    @staticmethod
+    @error_code_decorator
+    def readme_lint_errors(arg):
+        message_to_return = f'The {arg} release notes file is not linted properly'
+        return message_to_return
 
     @staticmethod
     @error_code_decorator

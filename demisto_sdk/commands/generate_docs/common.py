@@ -48,6 +48,7 @@ def generate_section(title, data=''):
     ]
     if data:
         section.extend(add_lines(data))
+        section.extend('')
     return section
 
 
@@ -115,7 +116,7 @@ def generate_table_section(data: list, title: str, empty_message: str = '', text
     """
     section = []
     if title:
-        section.append(f'## {title}')
+        section.extend([f'## {title}', ''])
 
     if horizontal_rule:
         section.append('---')

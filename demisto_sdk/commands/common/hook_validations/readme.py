@@ -26,6 +26,7 @@ from demisto_sdk.commands.common.git_util import GitUtil
 from demisto_sdk.commands.common.handlers import JSON_Handler
 from demisto_sdk.commands.common.hook_validations.base_validator import (
     BaseValidator, error_codes)
+from demisto_sdk.commands.common.mardown_lint import has_markdown_lint_errors
 from demisto_sdk.commands.common.tools import (
     compare_context_path_in_yml_and_readme, get_content_path,
     get_url_with_retries, get_yaml, get_yml_paths_in_dir, print_warning,
@@ -128,6 +129,7 @@ class ReadMeValidator(BaseValidator):
                          suppress_print=suppress_print, json_file_path=json_file_path,
                          specific_validations=specific_validations)
         self.content_path = get_content_path()
+        self.file_path_str = file_path
         self.file_path = Path(file_path)
         self.pack_path = self.file_path.parent
         self.node_modules_path = self.content_path / Path('node_modules')
@@ -151,7 +153,8 @@ class ReadMeValidator(BaseValidator):
             self.is_context_different_in_yml(),
             self.verify_demisto_in_readme_content(),
             self.verify_template_not_in_readme(),
-            self.verify_copyright_section_in_readme_content()
+            self.verify_copyright_section_in_readme_content(),
+            self.has_no_markdown_lint_errors()
         ])
 
     def mdx_verify(self) -> bool:
@@ -629,6 +632,14 @@ class ReadMeValidator(BaseValidator):
                 is_valid = False
 
         return is_valid
+
+    @error_codes('RM114')
+    def has_no_markdown_lint_errors(self):
+        if has_markdown_lint_errors(self.file_path_str):
+            error_message, error_code = Errors.readme_lint_errors(self.file_path_str)
+            if self.handle_error(error_message, error_code, file_path=self.file_path):
+                return False
+        return True
 
     @error_codes('RM107')
     def verify_template_not_in_readme(self):
