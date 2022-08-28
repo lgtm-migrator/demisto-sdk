@@ -1849,7 +1849,7 @@ class Errors:
     @staticmethod
     @error_code_decorator
     def readme_lint_errors(arg):
-        message_to_return = f'The {arg} release notes file is not linted properly'
+        message_to_return = f'The {arg} readme file is not linted properly'
         return message_to_return
 
     @staticmethod
