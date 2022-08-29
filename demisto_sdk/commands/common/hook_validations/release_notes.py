@@ -9,7 +9,6 @@ from demisto_sdk.commands.common.constants import (
 from demisto_sdk.commands.common.errors import Errors
 from demisto_sdk.commands.common.hook_validations.base_validator import (
     BaseValidator, error_codes)
-from demisto_sdk.commands.common.mardown_lint import has_markdown_lint_errors
 from demisto_sdk.commands.common.tools import (extract_docker_image_from_text,
                                                find_type, get_dict_from_file,
                                                get_latest_release_notes_text,
@@ -144,10 +143,10 @@ class ReleaseNotesValidator(BaseValidator):
 
     @error_codes('RN113')
     def has_no_markdown_lint_errors(self):
-        if has_markdown_lint_errors(self.release_notes_file_path):
-            error_message, error_code = Errors.release_notes_lint_errors(self.release_notes_file_path)
-            if self.handle_error(error_message, error_code, file_path=self.release_notes_file_path):
-                return False
+        # if has_markdown_lint_errors(self.release_notes_file_path):
+        #     error_message, error_code = Errors.release_notes_lint_errors(self.release_notes_file_path)
+        #     if self.handle_error(error_message, error_code, file_path=self.release_notes_file_path):
+        #         return False
 
         return True
 
