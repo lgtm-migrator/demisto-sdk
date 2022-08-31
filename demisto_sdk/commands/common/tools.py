@@ -1344,6 +1344,8 @@ def find_type_by_path(path: Union[str, Path] = '') -> Optional[FileType]:
             return FileType.CONTRIBUTORS
         elif AGENT_CONFIG_DIR in path.parts:
             return FileType.AGENT_CONFIG
+        elif MODELING_RULES_DIR in path.parts and 'testdata' in path.stem.casefold():
+            return FileType.MODELING_RULE_TEST_DATA
 
     elif path.name.endswith('_image.png'):
         if path.name.endswith('Author_image.png'):
@@ -1367,6 +1369,8 @@ def find_type_by_path(path: Union[str, Path] = '') -> Optional[FileType]:
         return FileType.JAVASCRIPT_FILE
 
     elif path.suffix == '.xif':
+        if MODELING_RULES_DIR in path.parts:
+            return FileType.MODELING_RULE_XIF
         return FileType.XIF_FILE
 
     elif path.suffix == '.yml':
