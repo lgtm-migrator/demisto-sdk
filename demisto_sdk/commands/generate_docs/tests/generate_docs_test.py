@@ -14,6 +14,8 @@ from demisto_sdk.commands.generate_docs.generate_integration_doc import (
     generate_commands_section, generate_integration_doc,
     generate_mirroring_section, generate_setup_section,
     generate_single_command_section, get_command_examples)
+from demisto_sdk.commands.generate_docs.generate_playbook_doc import \
+    generate_playbook_doc
 from demisto_sdk.commands.generate_docs.generate_script_doc import \
     generate_script_doc
 from TestSuite.pack import Pack
@@ -23,6 +25,7 @@ json = JSON_Handler()
 FILES_PATH = os.path.normpath(os.path.join(__file__, git_path(), 'demisto_sdk', 'tests', 'test_files'))
 FAKE_ID_SET = get_json(os.path.join(FILES_PATH, 'fake_id_set.json'))
 TEST_PLAYBOOK_PATH = os.path.join(FILES_PATH, 'playbook-Test_playbook.yml')
+PLAYBOOK_PATH = os.path.join(FILES_PATH, 'beta-playbook-valid.yml')
 TEST_SCRIPT_PATH = os.path.join(FILES_PATH, 'script-test_script.yml')
 TEST_INTEGRATION_PATH = os.path.join(FILES_PATH, 'fake_integration/fake_integration.yml')
 TEST_INTEGRATION_2_PATH = os.path.join(FILES_PATH, 'integration-display-credentials-none/integration-display'
@@ -641,6 +644,11 @@ def handle_example(example, insecure):
     values = ' | '.join(context.values())
     human_readable = '\n'.join([headers, sep, values])
     return name, human_readable, context, []
+
+
+def test_generate_playbook_doc_passes_markdownlint(tmp_path):
+    generate_playbook_doc(PLAYBOOK_PATH, str(tmp_path), "admin", "a limitation", False)
+    assert not has_markdown_lint_errors(tmp_path / 'beta-playbook-valid_README.md')
 
 
 def test_generate_script_doc_passes_markdownlint(tmp_path, mocker):
