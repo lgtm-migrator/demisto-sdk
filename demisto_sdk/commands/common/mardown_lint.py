@@ -6,12 +6,13 @@ import click
 from demisto_sdk.commands.common.tools import run_command_os
 
 RULES_TO_DISABLE = {
-    'md041',  # First line in file should be a top level heading
-    'md047',  # Each file should end with a single newline character
-    'md013',  # Line length
-    'md024',  # Multiple headings cannot contain the same content.
+    "MD026",  # Trailing punctuation present in heading text. (no-trailing-punctuation)"
+    'MD041',  # First line in file should be a top level heading
+    'MD047',  # Each file should end with a single newline character
+    'MD013',  # Line length
+    'MD024',  # Multiple headings cannot contain the same content.
     'MD001',  # Heading levels should only increment by one level at a time
-    'md007',  # Unordered list indentation (this doesnt seem to work properly)
+    'MD007',  # Unordered list indentation (this doesnt seem to work properly)
     'MD036',  # Emphasis possibly used instead of a heading element. (cant enforce a warning)
     'MD009',  # Trailing spaces
 }
