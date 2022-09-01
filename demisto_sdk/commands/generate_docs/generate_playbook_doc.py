@@ -20,7 +20,7 @@ def generate_playbook_doc(input_path: str, output: str = None, permissions: str 
         _name = playbook.get('name', 'Unknown')
         if not description:
             errors.append('Error! You are missing description for the playbook')
-        doc = [description, '', '## Dependencies',
+        doc = [description, '', '## Dependencies', '',
                'This playbook uses the following sub-playbooks, integrations, and scripts.', '']
         playbooks, integrations, scripts, commands = get_playbook_dependencies(playbook, input_path)
         inputs, inputs_errors = get_inputs(playbook)
@@ -54,7 +54,7 @@ def generate_playbook_doc(input_path: str, output: str = None, permissions: str 
         if limitations:
             doc.extend(generate_numbered_section('Known Limitations', limitations))
 
-        doc.append('## Playbook Image\n---')
+        doc.extend(['## Playbook Image', '', '---', ''])
         doc.append(generate_image_path(_name, custom_image_path))
 
         doc_text = '\n'.join(doc)

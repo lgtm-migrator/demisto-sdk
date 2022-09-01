@@ -60,7 +60,7 @@ def generate_numbered_section(title: str, data: str = ''):
     :return: array of strings contains the section lines in markdown format.
     """
     section = [
-        '## {}'.format(title)
+        '## {}'.format(title), ''
     ]
 
     list_data = data.split('* ')
@@ -68,7 +68,7 @@ def generate_numbered_section(title: str, data: str = ''):
         for i, item in enumerate(list_data):
             if item:
                 section.append(f'{i}. {item.rstrip()}')
-
+        section.append('')
     return section
 
 
@@ -85,7 +85,7 @@ def generate_list_section(title, data='', horizontal_rule=False, empty_message='
      """
     section = []
     if title:
-        section.append(f'{header_type} {title}')
+        section.extend([f'{header_type} {title}', ''])
 
     if horizontal_rule:
         section.append('---')
