@@ -116,7 +116,7 @@ class TestPlaybooks:
         with open(readme_path, 'r') as readme_file:
             contents = readme_file.read()
             assert 'Builtin' not in contents
-            assert '### Integrations\n* DummyIntegration\n' in contents
+            assert '### Integrations\n\n* DummyIntegration\n' in contents
 
     def test_integration_generate_docs_playbook_pack_dependencies(self, tmpdir):
         """
@@ -151,7 +151,7 @@ class TestPlaybooks:
         with open(readme_path, 'r') as readme_file:
             contents = readme_file.read()
             assert 'Builtin' not in contents
-            assert '### Integrations\n* PaloAltoNetworks_XDR\n' in contents
+            assert '### Integrations\n\n* PaloAltoNetworks_XDR\n' in contents
 
     def test_integration_generate_docs_positive_with_and_without_io(self, tmpdir):
         """
