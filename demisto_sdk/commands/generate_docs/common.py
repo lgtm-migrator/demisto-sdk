@@ -95,7 +95,7 @@ def generate_list_section(title, data='', horizontal_rule=False, empty_message='
         return section
 
     if text:
-        section.append(text)
+        section.extend([text, ''])
     for item in data:
         section.append(f'* {item}')
     section.append('')

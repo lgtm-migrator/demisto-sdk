@@ -108,7 +108,7 @@ def test_generate_list_section_empty():
     section = generate_list_section('Inputs', [], empty_message='No inputs found.')
 
     expected_section = [
-        '## Inputs', 'No inputs found.', '']
+        '## Inputs', '', 'No inputs found.', '']
 
     assert section == expected_section
 
@@ -120,7 +120,7 @@ def test_generate_numbered_section():
     section = generate_numbered_section('Use Cases', '* Drink coffee. * Write code.')
 
     expected_section = [
-        '## Use Cases', '1. Drink coffee.', '2. Write code.']
+        '## Use Cases', '', '1. Drink coffee.', '2. Write code.', '']
 
     assert section == expected_section
 
@@ -131,7 +131,7 @@ def test_generate_list_section():
     section = generate_list_section('Inputs', ['item1', 'item2'], False, 'No inputs found.')
 
     expected_section = [
-        '## Inputs', '* item1', '* item2', '']
+        '## Inputs', '', '* item1', '* item2', '']
 
     assert section == expected_section
 
@@ -142,7 +142,7 @@ def test_generate_list_with_text_section():
     section = generate_list_section('Inputs', ['item1', 'item2'], True, 'No inputs found.', 'some text')
 
     expected_section = [
-        '## Inputs', '---', 'some text', '* item1', '* item2', '']
+        '## Inputs', '', '---', 'some text', '', '* item1', '* item2', '']
 
     assert section == expected_section
 
