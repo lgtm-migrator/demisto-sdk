@@ -6,6 +6,9 @@ import click
 from demisto_sdk.commands.common.tools import run_command_os
 
 RULES_TO_DISABLE = {
+    "MD039",  # Spaces inside link text
+    "MD038",  # Spaces inside code span elements"
+    "MD037",  # Spaces inside emphasis markers
     "MD026",  # Trailing punctuation present in heading text. (no-trailing-punctuation)"
     'MD041',  # First line in file should be a top level heading
     'MD047',  # Each file should end with a single newline character
