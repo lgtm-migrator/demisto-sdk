@@ -2,6 +2,7 @@ import glob
 import os
 import pathlib
 import shutil
+import tempfile
 from collections import Counter
 from copy import deepcopy
 from typing import Dict, Optional
@@ -13,6 +14,7 @@ from demisto_sdk.commands.common.constants import (
     DEFAULT_CONTENT_ITEM_TO_VERSION, FileType)
 from demisto_sdk.commands.common.handlers import JSON_Handler
 from demisto_sdk.commands.common.legacy_git_tools import git_path
+from demisto_sdk.commands.common.mardown_lint import has_markdown_lint_errors
 from demisto_sdk.commands.common.tools import get_json
 from demisto_sdk.commands.common.update_id_set import DEFAULT_ID_SET_PATH
 from demisto_sdk.commands.update_release_notes.update_rn import (
@@ -131,7 +133,7 @@ class TestRNUpdate:
             Then:
                 - return a markdown string
         """
-        expected_result = "\n#### Playbooks\n##### New: Hello World Playbook\n- Hello World Playbook description\n"
+        expected_result = "\n#### Playbooks\n\n##### New: Hello World Playbook\n- Hello World Playbook description\n"
         from demisto_sdk.commands.update_release_notes.update_rn import \
             UpdateRN
         mock_master.return_value = '1.0.0'
@@ -144,6 +146,36 @@ class TestRNUpdate:
         release_notes = update_rn.build_rn_template(changed_items)
         assert expected_result == release_notes
 
+    @mock.patch.object(UpdateRN, 'get_master_version')
+    def test_build_rn_template_markdown_valid(self, mock_master):
+        """
+            Given:
+                - a dict of changed items
+            When:
+                - we want to produce a release notes template for new file
+            Then:
+                - return a markdown string
+        """
+        from demisto_sdk.commands.update_release_notes.update_rn import \
+            UpdateRN
+        mock_master.return_value = '1.0.0'
+        update_rn = UpdateRN(pack_path="Packs/HelloWorld", update_type='minor',
+                             modified_files_in_pack={'HelloWorld'},
+                             added_files=set())
+        changed_items = {
+            ('Hello World Integration', FileType.INTEGRATION): {'description': "", 'is_new_file': True,
+                                                                'fromversion': '5.0.0'},
+            ('Hello World Playbook', FileType.PLAYBOOK): {'description': '', 'is_new_file': True,
+                                                          'fromversion': '5.5.0'},
+            ("Hello World Script", FileType.SCRIPT): {'description': '', 'is_new_file': True, 'fromversion': '6.0.0'},
+        }
+        release_notes = update_rn.build_rn_template(changed_items)
+
+        with tempfile.NamedTemporaryFile(suffix=".md") as temp:
+            temp.write(release_notes.encode())
+            temp.flush()
+            assert not has_markdown_lint_errors(temp.name), release_notes
+
     def test_build_rn_template_playbook_modified_file(self, mocker):
         """
             Given:
@@ -153,7 +185,7 @@ class TestRNUpdate:
             Then:
                 - return a markdown string
         """
-        expected_result = '\n#### Playbooks\n##### Hello World Playbook\n- %%UPDATE_RN%%\n'
+        expected_result = '\n#### Playbooks\n\n##### Hello World Playbook\n- %%UPDATE_RN%%\n'
         from demisto_sdk.commands.update_release_notes.update_rn import \
             UpdateRN
         mocker.patch.object(UpdateRN, 'get_master_version', return_value='1.0.0')
@@ -201,7 +233,7 @@ class TestRNUpdate:
             Then:
                 - return a markdown string
         """
-        expected_result = "\n#### Integrations\n##### Hello World Integration\n" \
+        expected_result = "\n#### Integrations\n\n##### Hello World Integration\n" \
                           "- Documentation and metadata improvements.\n"
         from demisto_sdk.commands.update_release_notes.update_rn import \
             UpdateRN
@@ -225,7 +257,7 @@ class TestRNUpdate:
         Then:
             - return a markdown string
         """
-        expected_result = "\n#### Integrations\n##### HelloWorld\n- Documentation and metadata improvements.\n"
+        expected_result = "\n#### Integrations\n\n##### HelloWorld\n- Documentation and metadata improvements.\n"
         from demisto_sdk.commands.update_release_notes.update_rn import \
             UpdateRN
         mock_master.return_value = '1.0.0'
@@ -1490,16 +1522,16 @@ class TestRNUpdateUnit:
         os.remove('demisto_sdk/commands/update_release_notes/tests_data/Packs/release_notes/1_1_0.md')
         assert 'Updated the Docker image to: *dockerimage:python/test:1243*' not in RN
 
-    docker_image_test_rn = '#### Integrations\n##### BitcoinAbuse Feed\n- %%UPDATE_RN%%\n- Updated the Docker image ' \
+    docker_image_test_rn = '#### Integrations\n\n##### BitcoinAbuse Feed\n- %%UPDATE_RN%%\n- Updated the Docker image ' \
                            'to: *demisto/python3:3.9.1.149615*.\n'
     docker_image_test_data = [
-        ('#### Integrations\n##### BitcoinAbuse Feed\n- %%UPDATE_RN%%\n', None,
-         '#### Integrations\n##### BitcoinAbuse Feed\n- %%UPDATE_RN%%\n', False),
-        ('#### Integrations\n##### BitcoinAbuse Feed\n- %%UPDATE_RN%%\n', 'demisto/python3:3.9.1.149615',
+        ('#### Integrations\n\n##### BitcoinAbuse Feed\n- %%UPDATE_RN%%\n', None,
+         '#### Integrations\n\n##### BitcoinAbuse Feed\n- %%UPDATE_RN%%\n', False),
+        ('#### Integrations\n\n##### BitcoinAbuse Feed\n- %%UPDATE_RN%%\n', 'demisto/python3:3.9.1.149615',
          docker_image_test_rn, True),
         (docker_image_test_rn, 'demisto/python3:3.9.1.149615', docker_image_test_rn, False),
         (docker_image_test_rn, 'demisto/python3:3.9.1.149616',
-         '#### Integrations\n##### BitcoinAbuse Feed\n- %%UPDATE_RN%%\n- Updated the Docker image '
+         '#### Integrations\n\n##### BitcoinAbuse Feed\n- %%UPDATE_RN%%\n- Updated the Docker image '
          'to: *demisto/python3:3.9.1.149616*.\n', True)
     ]
 
@@ -1618,13 +1650,13 @@ def test_docker_image_is_added_for_every_integration(mocker, repo):
 
 
 HANDLE_EXISTING_RN_WITH_DOCKER_IMAGE_INPUTS = [
-    ('#### Integrations\n##### IBM QRadar v2\n- %%UPDATE_RN%%\n##### IBM QRadar v3\n- %%UPDATE_RN%%',
+    ('#### Integrations\n\n##### IBM QRadar v2\n- %%UPDATE_RN%%\n\n##### IBM QRadar v3\n- %%UPDATE_RN%%',
      'Integrations', 'demisto/python3:3.9.5.21276', 'IBM QRadar v3',
-     '#### Integrations\n##### IBM QRadar v2\n- %%UPDATE_RN%%\n##### IBM QRadar v3\n- Updated the Docker image to: '
+     '#### Integrations\n\n##### IBM QRadar v2\n- %%UPDATE_RN%%\n\n##### IBM QRadar v3\n- Updated the Docker image to: '
      '*demisto/python3:3.9.5.21276*.\n- %%UPDATE_RN%%'),
-    ('#### Integrations\n##### IBM QRadar v3\n- %%UPDATE_RN%%',
+    ('#### Integrations\n\n##### IBM QRadar v3\n- %%UPDATE_RN%%',
      'Integrations', 'demisto/python3:3.9.5.21276', 'IBM QRadar v3',
-     '#### Integrations\n##### IBM QRadar v3\n- Updated the Docker image to: '
+     '#### Integrations\n\n##### IBM QRadar v3\n- Updated the Docker image to: '
      '*demisto/python3:3.9.5.21276*.\n- %%UPDATE_RN%%')]
 
 
