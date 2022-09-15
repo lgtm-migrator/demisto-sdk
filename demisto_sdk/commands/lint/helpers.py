@@ -234,15 +234,15 @@ def add_tmp_lint_files(content_repo: Path, pack_path: Path, lint_files: List[Pat
             python_module = TYPE_PYTHON == pack_type and module.suffix == '.py'
             if pwsh_module or python_module:
                 cur_path = pack_path / module.name
-                if not cur_path.exists():
-                    cur_path.write_bytes(content)
-                    added_modules.append(cur_path)
+                cur_path.unlink(missing_ok=True)
+                cur_path.write_bytes(content)
+                added_modules.append(cur_path)
         if pack_type == TYPE_PYTHON:
             # Append empty so it will exists
             cur_path = pack_path / "CommonServerUserPython.py"
-            if not cur_path.exists():
-                cur_path.touch()
-                added_modules.append(cur_path)
+            cur_path.unlink(missing_ok=True)
+            cur_path.touch()
+            added_modules.append(cur_path)
 
             # Add API modules to directory if needed
             module_regex = r'from ([\w\d]+ApiModule) import \*(?:  # noqa: E402)?'

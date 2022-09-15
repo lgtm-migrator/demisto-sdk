@@ -1,7 +1,7 @@
 # Changelog
 * Added playbook modification capabilities in **TestSuite**.
 * Added a new command **create-content-graph**.
-
+* Fixed an issue on which **lint** will not override the imported modules.
 
 ## Unreleased
 * Added an error when the docker daemon is unavailable when running **lint**.
