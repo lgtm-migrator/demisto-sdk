@@ -134,3 +134,15 @@ def delete_all_graph_nodes(
     DETACH DELETE n
     """
     run_query(tx, query)
+
+
+def delete_packs_and_their_entities(
+    tx: Transaction,
+    packs_to_delete: List[str],
+) -> None:
+    query = f"""
+    MATCH (p:Pack)<-[:IN_PACK]-(n) WHERE p.object_id IN {packs_to_delete}
+    DETACH DELETE n, p
+    """
+    run_query(tx, query)
+    run_query(tx, 'MATCH (c:Command) WHERE NOT ()-[]->(c) DELETE c')

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from demisto_sdk.commands.common.constants import MarketplaceVersions
@@ -35,6 +36,10 @@ class ContentGraphInterface(ABC):
         pass
 
     @abstractmethod
+    def delete_packs(self, packs_to_delete: List[str]) -> None:
+        pass
+
+    @abstractmethod
     def get_nodes_by_type(self, content_type: ContentType) -> Any:
         pass
 
@@ -56,6 +61,14 @@ class ContentGraphInterface(ABC):
 
     @abstractmethod
     def get_relationships_by_type(self, relationship: Relationship) -> Any:
+        pass
+
+    @abstractmethod
+    def import_graphs(self, import_paths: List[Path]) -> None:
+        pass
+
+    @abstractmethod
+    def export_graph(self) -> None:
         pass
 
     @abstractmethod

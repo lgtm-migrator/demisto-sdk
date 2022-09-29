@@ -1,5 +1,8 @@
+import csv
 import logging
 from pathlib import Path
+import shutil
+from tempfile import NamedTemporaryFile
 from typing import Any, Dict, List, Optional
 
 import neo4j
@@ -18,13 +21,40 @@ from demisto_sdk.commands.content_graph.interface.neo4j.queries.constraints impo
 from demisto_sdk.commands.content_graph.interface.neo4j.queries.indexes import \
     create_indexes
 from demisto_sdk.commands.content_graph.interface.neo4j.queries.nodes import (
-    create_nodes, delete_all_graph_nodes, duplicates_exist,
+    create_nodes, delete_all_graph_nodes, delete_packs_and_their_entities, duplicates_exist,
     get_all_integrations_with_commands, get_nodes_by_type,
     get_packs_content_items, search_nodes)
 from demisto_sdk.commands.content_graph.interface.neo4j.queries.relationships import (
     create_relationships, get_relationships_by_type)
+from demisto_sdk.commands.content_graph.interface.neo4j.queries.tools import export_to_csv, import_csv
 
 logger = logging.getLogger('demisto-sdk')
+
+
+def prepare_csv_files_for_import(import_path: Path, prefix: str) -> None:
+    for filename in import_path.iterdir():
+        if filename.suffix == '.csv':
+            tempfile = NamedTemporaryFile(mode='w', delete=False)
+            with open(filename, 'r') as csv_file, tempfile:
+                reader = csv.reader(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                writer = csv.writer(tempfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                headers = next(reader)
+                for idx, header in enumerate(headers):
+                    if header in ['__csv_id', '__csv_type']:
+                        headers.remove(header)
+                        csv_header_exists = True
+                        break
+                else:
+                    csv_header_exists = False
+                writer.writerow(headers)
+                for row in reader:
+                    row[0] = prefix + row[0]
+                    row[1] = prefix + row[1] if 'relationships' in filename.name else row[1]
+                    if csv_header_exists:
+                        row.remove(row[idx])
+                    writer.writerow(row)
+
+            shutil.move(tempfile.name, filename.as_posix())
 
 
 class Neo4jContentGraphInterface(ContentGraphInterface):
@@ -85,6 +115,11 @@ class Neo4jContentGraphInterface(ContentGraphInterface):
         with self.driver.session() as session:
             session.write_transaction(delete_all_graph_nodes)
 
+    def delete_packs(self, packs_to_delete: List[str]) -> None:
+        if packs_to_delete:
+            with self.driver.session() as session:
+                session.write_transaction(delete_packs_and_their_entities, packs_to_delete)
+
     def get_nodes_by_type(self, content_type: ContentType) -> Any:
         with self.driver.session() as session:
             return session.read_transaction(get_nodes_by_type, content_type)
@@ -108,6 +143,16 @@ class Neo4jContentGraphInterface(ContentGraphInterface):
     def get_relationships_by_type(self, relationship: Relationship) -> Any:
         with self.driver.session() as session:
             return session.read_transaction(get_relationships_by_type, relationship)
+
+    def import_graphs(self, import_paths: List[Path]) -> None:
+        with self.driver.session() as session:
+            for idx, import_path in enumerate(import_paths, 1):
+                prepare_csv_files_for_import(import_path, prefix=str(idx))
+                session.write_transaction(import_csv, import_path)
+
+    def export_graph(self) -> None:
+        with self.driver.session() as session:
+            session.write_transaction(export_to_csv)
 
     def run_single_query(self, query: str, **kwargs) -> neo4j.Result:
         def q(tx: neo4j.Transaction, **kwargs) -> Any:

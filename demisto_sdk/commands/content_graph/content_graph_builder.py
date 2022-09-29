@@ -1,7 +1,7 @@
 import logging
 import traceback
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from demisto_sdk.commands.common.handlers import JSON_Handler
 from demisto_sdk.commands.content_graph.common import Nodes, Relationships
@@ -18,7 +18,14 @@ logger = logging.getLogger('demisto-sdk')
 
 
 class ContentGraphBuilder:
-    def __init__(self, repo_path: Path, content_graph: ContentGraphInterface, clean_graph: bool = True) -> None:
+    def __init__(
+        self,
+        repo_path: Path,
+        content_graph: ContentGraphInterface,
+        clean_graph: bool = True,
+        import_paths: Optional[List[Path]] = None,
+        packs: Optional[List[str]] = None,
+    ) -> None:
         """ Given a repo path and graph DB interface:
         1. Creates a repository model
         2. Collects all nodes and relationships from the model
@@ -29,15 +36,24 @@ class ContentGraphBuilder:
             clean_graph (bool, optional): Whether or not to clean the graph.
         """
         self.content_graph = content_graph
-        if clean_graph:
-            self.content_graph.clean_graph()
         self.nodes: Nodes = Nodes()
         self.relationships: Relationships = Relationships()
+        self.packs_to_parse = packs
+        self._preprepare_database(clean_graph, import_paths)
+
         self.repository: Repository = self._create_repository(repo_path)
 
         for pack in self.repository.packs:
             self.nodes.update(pack.to_nodes())
             self.relationships.update(pack.relationships)
+
+    def _preprepare_database(self, clean_graph: bool, import_paths: Optional[List[Path]]) -> None:
+        self.content_graph.create_indexes_and_constraints()
+        if clean_graph:
+            self.content_graph.clean_graph()
+            if import_paths:
+                self.content_graph.import_graphs(import_paths)
+        self.content_graph.delete_packs(self.packs_to_parse)
 
     def _create_repository(self, path: Path) -> Repository:
         """ Parses the repository and creates a repository model.
@@ -49,7 +65,7 @@ class ContentGraphBuilder:
             Repository: The repository model.
         """
         try:
-            repository_parser = RepositoryParser(path)
+            repository_parser = RepositoryParser(path, self.packs_to_parse)
         except Exception:
             logger.error(traceback.format_exc())
             raise
@@ -58,13 +74,7 @@ class ContentGraphBuilder:
     def create_graph(self) -> None:
         """ Runs DB queries using the collected nodes and relationships to create the content graph.
         """
-        self.content_graph.create_indexes_and_constraints()
         self.content_graph.create_nodes(self.nodes)
         self.content_graph.create_relationships(self.relationships)
-        self.content_graph.validate_graph()
-
-    def delete_modified_packs_from_graph(self, packs: List[str]) -> None:
-        pass
-
-    def get_modified_packs(self) -> List[str]:
-        return []  # todo
+        # self.content_graph.validate_graph()
+        self.content_graph.export_graph()
