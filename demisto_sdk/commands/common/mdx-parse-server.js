@@ -1,6 +1,38 @@
 const mdx = require('@mdx-js/mdx');
 const http = require('http')
+const markdownlint = require('markdownlint')
+const markdownlintRuleHelpers = require('markdownlint-rule-helpers')
 
+
+function markdownLint(req, res, body) {
+
+    res.statusCode = 200
+
+    fileName = "fileName"
+    const fixOptions = {
+      "strings": {
+        fileName : body
+      }
+    };
+    let validationResults = markdownlint.sync(fixOptions);
+
+    let fixedText = null;
+    if(req.url.includes('fix')) {
+        const fixes = validationResults[fileName].filter(error => error.fixInfo);
+        if (fixes.length > 0) {
+            fixedText = markdownlintRuleHelpers.applyFixes(body, fixes);
+        }
+        const fixOptions = {
+            "strings": {
+            fileName : fixedText
+            }
+        };
+        validationResults = markdownlint.sync(fixOptions)
+    }
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify({ "validations" : validationResults.toString(), fixedText : fixedText}))
+
+}
 function requestHandler(req, res) {
     // console.log(req)
     if (req.method != 'POST') {
@@ -14,13 +46,21 @@ function requestHandler(req, res) {
     })
     req.on('end', async function () {
         //   console.log('Body length: ' + body.length)
-        try {
-            parsed = await mdx(body)
-            res.end('Successfully parsed mdx')
-        } catch (error) {
-            res.statusCode = 500
-            res.end("MDX parse failure: " + error)
+        console.log(req.url)
+        if(req.url.includes('/markdownlint'))
+        {
+            markdownLint(req, res, body)
         }
+        else {
+            try {
+                parsed = await mdx(body)
+                res.end('Successfully parsed mdx')
+            } catch (error) {
+                res.statusCode = 500
+                res.end("MDX parse failure: " + error)
+            }
+        }
+
     })
 }
 
