@@ -12,6 +12,10 @@ class ContentGraphInterface(ABC):
         pass
 
     @abstractmethod
+    def create_server_content_items(self) -> None:
+        pass
+
+    @abstractmethod
     def create_nodes(self, nodes: Dict[ContentType, List[Dict[str, Any]]]) -> None:
         pass
 
@@ -64,7 +68,7 @@ class ContentGraphInterface(ABC):
         pass
 
     @abstractmethod
-    def import_graphs(self, import_paths: List[Path]) -> None:
+    def import_graphs(self, external_import_paths: List[Path]) -> None:
         pass
 
     @abstractmethod

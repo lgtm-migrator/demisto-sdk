@@ -41,23 +41,18 @@ def create_nodes(
 ) -> None:
     for content_type, data in nodes.items():
         create_nodes_by_type(tx, content_type, data)
+
+
+def create_server_nodes(tx: Transaction) -> None:
     for content_type, content_items in SERVER_CONTENT_ITEMS.items():
-        create_server_nodes_by_type(tx, content_type, content_items)
-
-
-def create_server_nodes_by_type(
-    tx: Transaction,
-    content_type: ContentType,
-    content_items: List[str],
-) -> None:
-    should_have_lowercase_id: bool = content_type in [ContentType.INCIDENT_FIELD, ContentType.INDICATOR_FIELD]
-    data = [{
-        'name': content_item,
-        'object_id': content_item.lower() if should_have_lowercase_id else content_item,
-        'content_type': content_type,
-        'is_server_item': True,
-    } for content_item in content_items]
-    create_nodes_by_type(tx, content_type, data)
+        should_have_lowercase_id: bool = content_type in [ContentType.INCIDENT_FIELD, ContentType.INDICATOR_FIELD]
+        data = [{
+            'name': content_item,
+            'object_id': content_item.lower() if should_have_lowercase_id else content_item,
+            'content_type': content_type,
+            'is_server_item': True,
+        } for content_item in content_items]
+        create_nodes_by_type(tx, content_type, data)
 
 
 def duplicates_exist(tx) -> bool:
@@ -141,8 +136,12 @@ def delete_packs_and_their_entities(
     packs_to_delete: List[str],
 ) -> None:
     query = f"""
-    MATCH (p:Pack)<-[:IN_PACK]-(n) WHERE p.object_id IN {packs_to_delete}
-    DETACH DELETE n, p
-    """
+MATCH (p:{ContentType.PACK})-[:{Relationship.IN_PACK}|{Relationship.HAS_COMMAND}*..2]-(n)
+WHERE p.object_id IN {packs_to_delete}
+UNWIND [p, n] AS pack_nodes
+OPTIONAL MATCH ()-[r:{Relationship.HAS_COMMAND}]->(pack_nodes)
+WITH pack_nodes, count(r) AS num_of_command_occurrences
+WHERE num_of_command_occurrences <= 1
+DETACH DELETE pack_nodes
+"""
     run_query(tx, query)
-    run_query(tx, 'MATCH (c:Command) WHERE NOT ()-[]->(c) DELETE c')

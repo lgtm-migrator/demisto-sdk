@@ -30,7 +30,7 @@ def create_content_graph(
 
 def update_content_graph(
     content_graph_interface: ContentGraphInterface,
-    import_paths: List[Path],
+    external_import_paths: List[Path],
     packs_to_update: List[str],
 ) -> None:
     """This function creates a new content graph database in neo4j from the content path
@@ -38,12 +38,11 @@ def update_content_graph(
     Args:
         content_graph_interface (ContentGraphInterface): The content graph interface.
     """
-    import_paths.append(REPO_PATH / 'neo4j' / 'import')
     content_graph_builder = ContentGraphBuilder(
         REPO_PATH,
         content_graph_interface,
-        clean_graph=True,
-        import_paths=import_paths,
+        import_graphs=True,
+        external_import_paths=external_import_paths,
         packs=packs_to_update,
     )
     content_graph_builder.create_graph()

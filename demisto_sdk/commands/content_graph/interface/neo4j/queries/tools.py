@@ -1,8 +1,5 @@
-import csv
 import logging
-import shutil
 from pathlib import Path
-from tempfile import NamedTemporaryFile
 from typing import List
 
 from neo4j import Transaction
@@ -45,5 +42,10 @@ def import_csv(
 ) -> None:
     nodes_files = get_nodes_files_to_import(import_path)
     relationships_files = get_relationships_files_to_import(import_path)
-    query = f'CALL apoc.import.csv([{nodes_files}], [{relationships_files}], {{}})'
-    run_query(tx, query)
+    run_query(tx, f'CALL apoc.import.csv([{nodes_files}], [{relationships_files}], {{}})')
+    run_query(tx, 'MATCH (n) REMOVE n.__csv_id')
+    run_query(tx, 'MATCH ()-[r]->() REMOVE r.__csv_type')
+
+
+def handle_duplicates(tx: Transaction) -> None:
+    pass

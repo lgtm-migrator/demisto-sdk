@@ -23,7 +23,8 @@ class ContentGraphBuilder:
         repo_path: Path,
         content_graph: ContentGraphInterface,
         clean_graph: bool = True,
-        import_paths: Optional[List[Path]] = None,
+        import_graphs: bool = False,
+        external_import_paths: Optional[List[Path]] = None,
         packs: Optional[List[str]] = None,
     ) -> None:
         """ Given a repo path and graph DB interface:
@@ -39,7 +40,8 @@ class ContentGraphBuilder:
         self.nodes: Nodes = Nodes()
         self.relationships: Relationships = Relationships()
         self.packs_to_parse = packs
-        self._preprepare_database(clean_graph, import_paths)
+        self.external_import_paths = external_import_paths
+        self._preprepare_database(clean_graph, import_graphs)
 
         self.repository: Repository = self._create_repository(repo_path)
 
@@ -47,12 +49,16 @@ class ContentGraphBuilder:
             self.nodes.update(pack.to_nodes())
             self.relationships.update(pack.relationships)
 
-    def _preprepare_database(self, clean_graph: bool, import_paths: Optional[List[Path]]) -> None:
+    def _preprepare_database(self, clean_graph: bool, import_graphs: bool) -> None:
         self.content_graph.create_indexes_and_constraints()
         if clean_graph:
             self.content_graph.clean_graph()
-            if import_paths:
-                self.content_graph.import_graphs(import_paths)
+
+        if import_graphs:
+            self.content_graph.import_graphs(self.external_import_paths)
+        else:
+            self.content_graph.create_server_content_items()
+
         self.content_graph.delete_packs(self.packs_to_parse)
 
     def _create_repository(self, path: Path) -> Repository:

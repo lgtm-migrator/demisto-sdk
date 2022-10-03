@@ -2319,7 +2319,8 @@ def create_content_graph(use_docker: bool = False, use_existing: bool = False, o
 @click.option('-us', '--use-existing', is_flag=True, help="Use existing service", default=False)
 @click.option('-p', '--packs', help="A comma-separated list of packs to update", default=None)
 @click.option('-i', '--import-path', type=click.Path(exists=True), multiple=True, default=None,
-              help="Path to a directory with graph data to import. Can be provided multiple times.")
+              help="Path to a directory with graph data to import (from external repositories). "
+                   "Can be provided multiple times.")
 @click.option('-o', '--output-file', type=click.Path(), help="dump file output", default=None)
 @click.option('-v', "--verbose", count=True, help="Verbosity level -v / -vv / .. / -vvv",
               type=click.IntRange(0, 3, clamp=True), default=2, show_default=True)
@@ -2346,7 +2347,7 @@ def update_content_graph(use_docker: bool = False, use_existing: bool = False, o
     ) as content_graph_interface:
         update_content_graph_command(
             content_graph_interface,
-            import_paths=import_paths,
+            external_import_paths=import_paths,
             packs_to_update=kwargs.get('packs', '').split(','),
         )
 

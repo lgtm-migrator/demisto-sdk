@@ -3,9 +3,31 @@ from typing import Any, Dict, List
 
 from neo4j import Transaction
 
-from demisto_sdk.commands.content_graph.common import ContentType, Relationship
+from demisto_sdk.commands.content_graph.common import SERVER_COMMANDS, ContentType, Relationship
 from demisto_sdk.commands.content_graph.interface.neo4j.queries.common import (
     labels_of, node_map, run_query)
+
+
+def create_server_commands_relationships(tx: Transaction) -> None:
+    data = []
+    for integration, commands in SERVER_COMMANDS.items():
+        data.extend([{'integration': integration, 'cmd': cmd} for cmd in commands])
+    query = f"""
+UNWIND $data AS rel_data
+
+MATCH (integration:{ContentType.INTEGRATION}{{is_server_item: true, object_id: rel_data.integration}})
+
+MERGE (cmd:{ContentType.COMMAND}{{object_id: rel_data.cmd, content_type: "{ContentType.COMMAND}"}})
+ON CREATE
+    SET cmd:{labels_of(ContentType.COMMAND)},
+        cmd.name = rel_data.cmd
+
+// Create the relationship
+MERGE (integration)-[r:{Relationship.HAS_COMMAND}{{is_server_item: true}}]->(cmd)
+
+RETURN count(r) AS relationships_merged
+"""
+    run_query(tx, query, data=data)
 
 
 def build_source_properties() -> str:

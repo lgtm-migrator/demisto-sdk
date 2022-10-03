@@ -1,8 +1,5 @@
-import csv
 import logging
 from pathlib import Path
-import shutil
-from tempfile import NamedTemporaryFile
 from typing import Any, Dict, List, Optional
 
 import neo4j
@@ -10,51 +7,35 @@ import neo4j
 import demisto_sdk.commands.content_graph.neo4j_service as neo4j_service
 from demisto_sdk.commands.common.constants import MarketplaceVersions
 from demisto_sdk.commands.content_graph.common import (NEO4J_DATABASE_URL,
+                                                       NEO4J_IMPORT_PATH,
                                                        NEO4J_PASSWORD,
                                                        NEO4J_USERNAME,
                                                        ContentType,
                                                        Relationship)
 from demisto_sdk.commands.content_graph.interface.graph import \
     ContentGraphInterface
+from demisto_sdk.commands.content_graph.interface.neo4j.import_utils import (
+    clean_import_dir_before_export,
+    fix_csv_files_after_export,
+    prepare_csv_files_for_import
+)
 from demisto_sdk.commands.content_graph.interface.neo4j.queries.constraints import \
     create_constraints
 from demisto_sdk.commands.content_graph.interface.neo4j.queries.indexes import \
     create_indexes
 from demisto_sdk.commands.content_graph.interface.neo4j.queries.nodes import (
-    create_nodes, delete_all_graph_nodes, delete_packs_and_their_entities, duplicates_exist,
+    create_nodes, create_server_nodes, delete_all_graph_nodes, delete_packs_and_their_entities, duplicates_exist,
     get_all_integrations_with_commands, get_nodes_by_type,
     get_packs_content_items, search_nodes)
 from demisto_sdk.commands.content_graph.interface.neo4j.queries.relationships import (
-    create_relationships, get_relationships_by_type)
-from demisto_sdk.commands.content_graph.interface.neo4j.queries.tools import export_to_csv, import_csv
+    create_relationships, create_server_commands_relationships, get_relationships_by_type)
+from demisto_sdk.commands.content_graph.interface.neo4j.queries.tools import (
+    handle_duplicates,
+    export_to_csv,
+    import_csv
+)
 
 logger = logging.getLogger('demisto-sdk')
-
-
-def prepare_csv_files_for_import(import_path: Path, prefix: str) -> None:
-    for filename in import_path.iterdir():
-        if filename.suffix == '.csv':
-            tempfile = NamedTemporaryFile(mode='w', delete=False)
-            with open(filename, 'r') as csv_file, tempfile:
-                reader = csv.reader(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-                writer = csv.writer(tempfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-                headers = next(reader)
-                for idx, header in enumerate(headers):
-                    if header in ['__csv_id', '__csv_type']:
-                        headers.remove(header)
-                        csv_header_exists = True
-                        break
-                else:
-                    csv_header_exists = False
-                writer.writerow(headers)
-                for row in reader:
-                    row[0] = prefix + row[0]
-                    row[1] = prefix + row[1] if 'relationships' in filename.name else row[1]
-                    if csv_header_exists:
-                        row.remove(row[idx])
-                    writer.writerow(row)
-
-            shutil.move(tempfile.name, filename.as_posix())
 
 
 class Neo4jContentGraphInterface(ContentGraphInterface):
@@ -89,6 +70,11 @@ class Neo4jContentGraphInterface(ContentGraphInterface):
         with self.driver.session() as session:
             session.write_transaction(create_indexes)
             session.write_transaction(create_constraints)
+
+    def create_server_content_items(self) -> None:
+        with self.driver.session() as session:
+            session.write_transaction(create_server_nodes)
+            session.write_transaction(create_server_commands_relationships)
 
     def create_nodes(self, nodes: Dict[ContentType, List[Dict[str, Any]]]) -> None:
         with self.driver.session() as session:
@@ -144,15 +130,19 @@ class Neo4jContentGraphInterface(ContentGraphInterface):
         with self.driver.session() as session:
             return session.read_transaction(get_relationships_by_type, relationship)
 
-    def import_graphs(self, import_paths: List[Path]) -> None:
+    def import_graphs(self, external_import_paths: List[Path]) -> None:
+        import_paths = [NEO4J_IMPORT_PATH] + external_import_paths
+        for idx, import_path in enumerate(import_paths, 1):
+            prepare_csv_files_for_import(import_path, prefix=str(idx))
         with self.driver.session() as session:
-            for idx, import_path in enumerate(import_paths, 1):
-                prepare_csv_files_for_import(import_path, prefix=str(idx))
-                session.write_transaction(import_csv, import_path)
+            session.write_transaction(import_csv, NEO4J_IMPORT_PATH)
+            session.write_transaction(handle_duplicates)
 
     def export_graph(self) -> None:
+        clean_import_dir_before_export()
         with self.driver.session() as session:
             session.write_transaction(export_to_csv)
+        fix_csv_files_after_export()
 
     def run_single_query(self, query: str, **kwargs) -> neo4j.Result:
         def q(tx: neo4j.Transaction, **kwargs) -> Any:
