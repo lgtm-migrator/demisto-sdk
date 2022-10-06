@@ -225,7 +225,9 @@ class DescriptionValidator(BaseValidator):
 
     @error_codes('DS108')
     def has_markdown_lint_errors(self):
-        if has_markdown_lint_errors(self.file_path):
+        with open(self.file_path) as f:
+            description_content = f.read()
+        if has_markdown_lint_errors(description_content):
             error_message, error_code = Errors.description_lint_errors(self.file_path)
             if self.handle_error(error_message, error_code, file_path=self.file_path):
                 self._is_valid = False

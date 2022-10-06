@@ -1,0 +1,10 @@
+{
+  "default": true,
+  "whitespace" : false,
+  "single-trailing-newline" : false,
+  "no-trailing-punctuation" : false,
+  "first-line-heading" : false,
+  "heading-increment" : false,
+  "line_length" : false,
+  "no-duplicate-heading" : false
+}

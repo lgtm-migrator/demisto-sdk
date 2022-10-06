@@ -1,45 +1,16 @@
-import logging
-import os
-
-import click
-
-from demisto_sdk.commands.common.tools import run_command_os
-
-RULES_TO_DISABLE = {
-    "MD039",  # Spaces inside link text
-    "MD038",  # Spaces inside code span elements"
-    "MD037",  # Spaces inside emphasis markers
-    "MD026",  # Trailing punctuation present in heading text. (no-trailing-punctuation)"
-    'MD041',  # First line in file should be a top level heading
-    'MD047',  # Each file should end with a single newline character
-    'MD013',  # Line length
-    'MD024',  # Multiple headings cannot contain the same content.
-    'MD001',  # Heading levels should only increment by one level at a time
-    'MD007',  # Unordered list indentation (this doesnt seem to work properly)
-    'MD036',  # Emphasis possibly used instead of a heading element. (cant enforce a warning)
-    'MD009',  # Trailing spaces
-}
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3 import Retry
 
 
-def has_markdown_lint_errors(file: str) -> bool:
-    """
-
-    Args:
-        file: The file to run lint on
-
-    Returns: whether errors were found in the markdown file
-
-    """
-    command = _build_command(file)
-    logging.info(f'running command "{command}"')
-    out, err, code = run_command_os(command, os.getcwd())
-
-    if out:
-        click.secho(out)
-    if err:
-        click.secho(err)
-    return code != 0
-
-
-def _build_command(file):
-    return f'pymarkdown -d {",".join(RULES_TO_DISABLE)} scan {file}'
+def has_markdown_lint_errors(file_content: str, file_path='file', fix=False) -> dict:
+    retry = Retry(total=2)
+    adapter = HTTPAdapter(max_retries=retry)
+    session = requests.Session()
+    session.mount('http://', adapter)
+    return session.request(
+        'POST',
+        f'http://localhost:6161/markdownlint?filename={file_path}&fix={fix}',
+        data=file_content.encode('utf-8'),
+        timeout=20
+    ).json()
