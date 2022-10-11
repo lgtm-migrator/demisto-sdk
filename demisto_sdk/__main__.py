@@ -5,13 +5,13 @@ import os
 import shutil
 import sys
 import tempfile
-import typer
 from configparser import ConfigParser, MissingSectionHeaderError
 from pathlib import Path
 from typing import IO, Any, Dict, List, Optional
 
 import click
 import git
+import typer
 from pkg_resources import DistributionNotFound, get_distribution
 
 from demisto_sdk.commands.common.configuration import Configuration
@@ -2420,7 +2420,8 @@ def test_modeling_rule(
     )
 ):
     from demisto_sdk.commands.common.logger import logging_setup
-    from demisto_sdk.commands.test_content.modeling_rule import test_modeling_rules
+    from demisto_sdk.commands.test_content.modeling_rule import \
+        test_modeling_rules
     logging_setup(
         verbose=verbosity,  # type: ignore[arg-type]
         quiet=quiet,  # type: ignore[arg-type]
