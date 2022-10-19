@@ -1355,8 +1355,9 @@ class Errors:
 
     @staticmethod
     @error_code_decorator
-    def description_lint_errors(rn_file_name):
-        message_to_return = f'The {rn_file_name} description file is not linted properly'
+    def description_lint_errors(rn_file_name, validations):
+        message_to_return = f'The {rn_file_name} description file is not linted properly. See the validations below' \
+                            f' \n{validations}'
         return message_to_return
 
     @staticmethod
