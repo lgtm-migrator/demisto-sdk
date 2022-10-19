@@ -37,6 +37,7 @@ function markdownLint(req, res, body) {
             fixedText = markdownlintRuleHelpers.applyFixes(body, fixes);
         }
         const fixOptions = {
+            "config" : config,
             "strings": {
             [fileName] : fixedText
             }

@@ -5,8 +5,9 @@ from typing import Dict, List
 import pytest
 
 from demisto_sdk.commands.common.handlers import JSON_Handler
+from demisto_sdk.commands.common.hook_validations.readme import ReadMeValidator
 from demisto_sdk.commands.common.legacy_git_tools import git_path
-from demisto_sdk.commands.common.mardown_lint import has_markdown_lint_errors
+from demisto_sdk.commands.common.mardown_lint import run_markdownlint
 from demisto_sdk.commands.common.tools import get_json, get_yaml
 from demisto_sdk.commands.create_id_set.create_id_set import IDSetCreator
 from demisto_sdk.commands.generate_docs.generate_integration_doc import (
@@ -648,7 +649,11 @@ def handle_example(example, insecure):
 
 def test_generate_playbook_doc_passes_markdownlint(tmp_path):
     generate_playbook_doc(PLAYBOOK_PATH, str(tmp_path), "admin", "a limitation", False)
-    assert not has_markdown_lint_errors(tmp_path / 'beta-playbook-valid_README.md')
+    with ReadMeValidator.start_mdx_server():
+        with open(tmp_path / 'beta-playbook-valid_README.md') as file:
+            content = file.read()
+            markdownlint = run_markdownlint(content)
+            assert not markdownlint.has_errors, markdownlint.validations
 
 
 def test_generate_script_doc_passes_markdownlint(tmp_path, mocker):
@@ -664,7 +669,9 @@ def test_generate_script_doc_passes_markdownlint(tmp_path, mocker):
     mocker.patch('demisto_sdk.commands.generate_docs.generate_script_doc.get_used_in', return_value=[])
     generate_script_doc(in_script, '!Set key=k1 value=v1,!Set key=k2 value=v2 append=true', str(d), verbose=True)
     readme = d / "README.md"
-    assert not has_markdown_lint_errors(readme)
+    with ReadMeValidator.start_mdx_server():
+        with open(readme) as file:
+            assert not run_markdownlint(file.read()).has_errors
 
 
 def test_generate_script_doc(tmp_path, mocker):
@@ -776,9 +783,12 @@ class TestGenerateIntegrationDoc:
                 assert "This integration was integrated and tested with version xx of" not in fake_data
 
     def test_generate_integration_doc_passes_markdownlint(self):
-        # Generate doc
         generate_integration_doc(TEST_INTEGRATION_PATH, is_contribution=False)
-        assert not has_markdown_lint_errors(os.path.join(os.path.dirname(TEST_INTEGRATION_PATH), 'README.md'))
+        # Generate doc
+        with ReadMeValidator.start_mdx_server():
+            with open(os.path.join(os.path.dirname(TEST_INTEGRATION_PATH), 'README.md')) as real_readme_file:
+                markdownlint = run_markdownlint(real_readme_file.read())
+                assert not markdownlint.has_errors, markdownlint.validations
 
     def test_integration_doc_credentials_display_missing(self):
         """

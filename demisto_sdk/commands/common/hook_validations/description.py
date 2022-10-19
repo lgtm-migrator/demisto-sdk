@@ -9,7 +9,7 @@ from demisto_sdk.commands.common.hook_validations.base_validator import (
     BaseValidator, error_codes)
 from demisto_sdk.commands.common.hook_validations.structure import \
     StructureValidator
-from demisto_sdk.commands.common.mardown_lint import has_markdown_lint_errors
+from demisto_sdk.commands.common.mardown_lint import run_markdownlint
 from demisto_sdk.commands.common.tools import find_type, get_yaml, os, re
 
 CONTRIBUTOR_DETAILED_DESC = 'Contributed Integration'
@@ -227,7 +227,7 @@ class DescriptionValidator(BaseValidator):
     def has_markdown_lint_errors(self):
         with open(self.file_path) as f:
             description_content = f.read()
-        if has_markdown_lint_errors(description_content):
+        if run_markdownlint(description_content):
             error_message, error_code = Errors.description_lint_errors(self.file_path)
             if self.handle_error(error_message, error_code, file_path=self.file_path):
                 self._is_valid = False

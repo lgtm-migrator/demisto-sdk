@@ -3,12 +3,13 @@ import os
 import pytest
 
 from demisto_sdk.commands.common.constants import FileType
+from demisto_sdk.commands.common.hook_validations.readme import ReadMeValidator
 from demisto_sdk.commands.common.hook_validations.release_notes import \
     ReleaseNotesValidator
 from demisto_sdk.commands.common.hook_validations.structure import \
     StructureValidator
 from demisto_sdk.commands.common.legacy_git_tools import git_path
-from demisto_sdk.commands.common.mardown_lint import has_markdown_lint_errors
+from demisto_sdk.commands.common.mardown_lint import run_markdownlint
 from demisto_sdk.commands.common.tools import get_dict_from_file
 from demisto_sdk.commands.update_release_notes.update_rn import UpdateRN
 from TestSuite.pack import Pack
@@ -403,18 +404,21 @@ def test_has_release_notes_been_filled_out(release_notes, filled_expected_result
 
 
 TEST_RELEASE_NOTES_TEST_BANK_3 = [
-    ('Integration', '#### Integrations\n##### Integration name\n- Upgraded the Docker image to: *demisto/python3:3.9.5.21272*.',
+    ('Integration',
+     '#### Integrations\n##### Integration name\n- Upgraded the Docker image to: *demisto/python3:3.9.5.21272*.',
      {'display': 'Integration name', 'script': {'dockerimage': 'demisto/python3:3.9.5.21272'}}, True),
     ('Script', '\n#### Scripts\n##### Script name\n- Upgraded the Docker image to: *demisto/python3:3.9.5.21272*.',
      {'name': 'Script name', 'dockerimage': 'demisto/python3:3.9.5.21272'}, True),
     ('Script', '\n#### Scripts\n##### Script name\n- Upgraded the Docker image to: *demisto/python3:3.9.5.2122*.',
      {'name': 'Script name', 'dockerimage': 'demisto/python3:3.9.4.272'}, False),
-    ('Integration', '#### Integrations\n##### Integration name\n- Moved the Pack to Cortex XSOAR support instead of community support.',
+    ('Integration',
+     '#### Integrations\n##### Integration name\n- Moved the Pack to Cortex XSOAR support instead of community support.',
      {'display': 'Integration name', 'script': {'dockerimage': 'demisto/python3:3.9.5.21272'}}, True),
 ]
 
 
-@pytest.mark.parametrize('category, release_notes_content, yml_content, filled_expected_result', TEST_RELEASE_NOTES_TEST_BANK_3)
+@pytest.mark.parametrize('category, release_notes_content, yml_content, filled_expected_result',
+                         TEST_RELEASE_NOTES_TEST_BANK_3)
 def test_is_docker_image_same_as_yml(category, release_notes_content, yml_content, filled_expected_result, pack: Pack):
     """
     Given
@@ -453,14 +457,16 @@ TEST_RELEASE_NOTES_TEST_BANK_4 = [
      "- Upgraded the Docker image to: *demisto/python3:3.9.5.21272*.\n" +
      "##### Integration name2\n- Upgraded the Docker image to: *demisto/python3:3.9.5.21272*.",
      {'Integrations': "##### Integration name1\n- Upgraded the Docker image to: *demisto/python3:3.9.5.21272*.\n" +
-      "##### Integration name2\n- Upgraded the Docker image to: *demisto/python3:3.9.5.21272*."}),
-    (ReleaseNotesValidator.get_entities_from_category, "\n##### Integration name1\n- Upgraded the Docker image to: *demisto/python3:3.9.5.21272*.\n" +
+                      "##### Integration name2\n- Upgraded the Docker image to: *demisto/python3:3.9.5.21272*."}),
+    (ReleaseNotesValidator.get_entities_from_category,
+     "\n##### Integration name1\n- Upgraded the Docker image to: *demisto/python3:3.9.5.21272*.\n" +
      "##### Integration name2\n- Upgraded the Docker image to: *demisto/python3:3.9.5.21272*.",
      {'Integration name1': '- Upgraded the Docker image to: *demisto/python3:3.9.5.21272*.',
       'Integration name2': '- Upgraded the Docker image to: *demisto/python3:3.9.5.21272*.'}), ]
 
 
-@pytest.mark.parametrize('method_to_check, release_notes_content, filled_expected_result', TEST_RELEASE_NOTES_TEST_BANK_4)
+@pytest.mark.parametrize('method_to_check, release_notes_content, filled_expected_result',
+                         TEST_RELEASE_NOTES_TEST_BANK_4)
 def test_get_categories_from_rn(method_to_check, release_notes_content, filled_expected_result, pack: Pack):
     """
     Given
@@ -501,8 +507,10 @@ TEST_RELEASE_NOTES_BREAKING_CHANGE = [
 ]
 
 
-@pytest.mark.parametrize('release_notes_content, has_json, change_json, expected_result', TEST_RELEASE_NOTES_BREAKING_CHANGE)
-def test_validate_json_when_breaking_changes(release_notes_content, has_json, change_json, expected_result, mocker, repo):
+@pytest.mark.parametrize('release_notes_content, has_json, change_json, expected_result',
+                         TEST_RELEASE_NOTES_BREAKING_CHANGE)
+def test_validate_json_when_breaking_changes(release_notes_content, has_json, change_json, expected_result, mocker,
+                                             repo):
     """
     Given
     - A release note.
@@ -523,22 +531,3 @@ def test_validate_json_when_breaking_changes(release_notes_content, has_json, ch
 
     validator.release_notes_file_path = release_note.path
     assert validator.validate_json_when_breaking_changes() == expected_result
-
-
-@pytest.mark.parametrize('note, has_error', [('##NoSpace', True), ('No Issue', False)])
-def test_validate_release_notes_markdownlint(note, has_error, mocker, repo):
-    """
-    Given
-    - A release note.
-    When
-    - Run validate_json_when_breaking_changes validation.
-    Then
-    - Ensure that if the release note contains 'breaking change', there is also an appropriate json file.
-    """
-    mocker.patch.object(ReleaseNotesValidator, '__init__', lambda a, b: None)
-    validator = get_validator(note, MODIFIED_FILES)
-    pack = repo.create_pack('test_pack')
-    release_note = pack.create_release_notes(version='1.0.0', content=note)
-
-    validator.release_notes_file_path = release_note.path
-    assert has_error == has_markdown_lint_errors(release_note.path)

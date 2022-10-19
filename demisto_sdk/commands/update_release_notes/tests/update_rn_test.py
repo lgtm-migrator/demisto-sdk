@@ -10,11 +10,13 @@ from typing import Dict, Optional
 import mock
 import pytest
 
+import demisto_sdk
 from demisto_sdk.commands.common.constants import (
     DEFAULT_CONTENT_ITEM_TO_VERSION, FileType)
 from demisto_sdk.commands.common.handlers import JSON_Handler
+from demisto_sdk.commands.common.hook_validations.readme import ReadMeValidator
 from demisto_sdk.commands.common.legacy_git_tools import git_path
-from demisto_sdk.commands.common.mardown_lint import has_markdown_lint_errors
+from demisto_sdk.commands.common.mardown_lint import run_markdownlint
 from demisto_sdk.commands.common.tools import get_json
 from demisto_sdk.commands.common.update_id_set import DEFAULT_ID_SET_PATH
 from demisto_sdk.commands.update_release_notes.update_rn import (
@@ -46,25 +48,25 @@ class TestRNUpdate:
                 - return a markdown string
         """
         expected_result = \
-            "\n#### Classifiers\n##### Hello World Classifier\n- %%UPDATE_RN%%\n" \
-            "\n#### Connections\n- **Hello World Connection**\n" \
-            "\n#### Dashboards\n##### Hello World Dashboard\n- %%UPDATE_RN%%\n" \
-            "\n#### Incident Fields\n- **Hello World IncidentField**\n" \
-            "\n#### Incident Types\n- **Hello World Incident Type**\n" \
-            "\n#### Indicator Fields\n- **Hello World Indicator Field**\n" \
-            "\n#### Indicator Types\n- **Hello World Indicator Type**\n" \
-            "\n#### Integrations\n##### Hello World Integration\n- %%UPDATE_RN%%\n" \
-            "\n#### Jobs\n##### Hello World Job #1\n- %%UPDATE_RN%%\n" \
-            "##### Hello World Job #2\n- %%UPDATE_RN%%\n" \
-            "\n#### Layouts\n- **Hello World Layout**\n" \
+            "\n#### Classifiers\n\n##### Hello World Classifier\n\n- %%UPDATE_RN%%\n" \
+            "\n#### Connections\n\n- **Hello World Connection**\n" \
+            "\n#### Dashboards\n\n##### Hello World Dashboard\n\n- %%UPDATE_RN%%\n" \
+            "\n#### Incident Fields\n\n- **Hello World IncidentField**\n" \
+            "\n#### Incident Types\n\n- **Hello World Incident Type**\n" \
+            "\n#### Indicator Fields\n\n- **Hello World Indicator Field**\n" \
+            "\n#### Indicator Types\n\n- **Hello World Indicator Type**\n" \
+            "\n#### Integrations\n\n##### Hello World Integration\n\n- %%UPDATE_RN%%\n" \
+            "\n#### Jobs\n\n##### Hello World Job #1\n\n- %%UPDATE_RN%%\n" \
+            "##### Hello World Job #2\n\n- %%UPDATE_RN%%\n" \
+            "\n#### Layouts\n\n- **Hello World Layout**\n" \
             "- **Second Hello World Layout**\n" \
-            "\n#### Modules\n##### Hello World Generic Module\n- %%UPDATE_RN%%\n" \
-            "\n#### Objects\n##### Hello World Generic Definition\n- %%UPDATE_RN%%\n" \
-            "\n#### Playbooks\n##### Hello World Playbook\n- %%UPDATE_RN%%\n" \
-            "\n#### Reports\n##### Hello World Report\n- %%UPDATE_RN%%\n" \
-            "\n#### Scripts\n##### Hello World Script\n- %%UPDATE_RN%%\n" \
-            "\n#### Widgets\n##### Hello World Widget\n- %%UPDATE_RN%%\n" \
-            "\n#### Wizards\n##### Hello World Wizard\n- %%UPDATE_RN%%\n"
+            "\n#### Modules\n\n##### Hello World Generic Module\n\n- %%UPDATE_RN%%\n" \
+            "\n#### Objects\n\n##### Hello World Generic Definition\n\n- %%UPDATE_RN%%\n" \
+            "\n#### Playbooks\n\n##### Hello World Playbook\n\n- %%UPDATE_RN%%\n" \
+            "\n#### Reports\n\n##### Hello World Report\n\n- %%UPDATE_RN%%\n" \
+            "\n#### Scripts\n\n##### Hello World Script\n\n- %%UPDATE_RN%%\n" \
+            "\n#### Widgets\n\n##### Hello World Widget\n\n- %%UPDATE_RN%%\n" \
+            "\n#### Wizards\n\n##### Hello World Wizard\n\n- %%UPDATE_RN%%\n"
         mocker.patch.object(UpdateRN, 'get_master_version', return_value='1.0.0')
         mocker.patch('demisto_sdk.commands.update_release_notes.update_rn.get_deprecated_rn', return_value='')
         update_rn = UpdateRN(pack_path="Packs/HelloWorld", update_type='minor', modified_files_in_pack={'HelloWorld'},
@@ -106,8 +108,8 @@ class TestRNUpdate:
                 - return a markdown string
         """
         expected_result = \
-            "\n#### Object Fields\n- **(Object) - Sample Generic Field**\n" \
-            "\n#### Object Types\n- **(Object) - Sample Generic Type**\n"
+            "\n#### Object Fields\n\n- **(Object) - Sample Generic Field**\n" \
+            "\n#### Object Types\n\n- **(Object) - Sample Generic Type**\n"
 
         pack_path = TestRNUpdate.FILES_PATH + "/generic_testing"
         mock_master.return_value = '1.0.0'
@@ -133,7 +135,7 @@ class TestRNUpdate:
             Then:
                 - return a markdown string
         """
-        expected_result = "\n#### Playbooks\n\n##### New: Hello World Playbook\n- Hello World Playbook description\n"
+        expected_result = "\n#### Playbooks\n\n##### New: Hello World Playbook\n\n- Hello World Playbook description\n"
         from demisto_sdk.commands.update_release_notes.update_rn import \
             UpdateRN
         mock_master.return_value = '1.0.0'
@@ -171,10 +173,9 @@ class TestRNUpdate:
         }
         release_notes = update_rn.build_rn_template(changed_items)
 
-        with tempfile.NamedTemporaryFile(suffix=".md") as temp:
-            temp.write(release_notes.encode())
-            temp.flush()
-            assert not has_markdown_lint_errors(temp.name), release_notes
+        with ReadMeValidator.start_mdx_server():
+            markdownlint = run_markdownlint(release_notes)
+            assert not markdownlint.has_errors, release_notes + f"\nValidations: {markdownlint.validations}"
 
     def test_build_rn_template_playbook_modified_file(self, mocker):
         """
@@ -185,7 +186,7 @@ class TestRNUpdate:
             Then:
                 - return a markdown string
         """
-        expected_result = '\n#### Playbooks\n\n##### Hello World Playbook\n- %%UPDATE_RN%%\n'
+        expected_result = '\n#### Playbooks\n\n##### Hello World Playbook\n\n- %%UPDATE_RN%%\n'
         from demisto_sdk.commands.update_release_notes.update_rn import \
             UpdateRN
         mocker.patch.object(UpdateRN, 'get_master_version', return_value='1.0.0')
@@ -210,7 +211,7 @@ class TestRNUpdate:
             Then:
                 - return a markdown string
         """
-        expected_result = '\n#### Incident Fields\n- **Hello World IncidentField**\n'
+        expected_result = '\n#### Incident Fields\n\n- **Hello World IncidentField**\n'
         from demisto_sdk.commands.update_release_notes.update_rn import \
             UpdateRN
         mock_master.return_value = '1.0.0'
@@ -233,7 +234,7 @@ class TestRNUpdate:
             Then:
                 - return a markdown string
         """
-        expected_result = "\n#### Integrations\n\n##### Hello World Integration\n" \
+        expected_result = "\n#### Integrations\n\n##### Hello World Integration\n\n" \
                           "- Documentation and metadata improvements.\n"
         from demisto_sdk.commands.update_release_notes.update_rn import \
             UpdateRN
@@ -257,7 +258,7 @@ class TestRNUpdate:
         Then:
             - return a markdown string
         """
-        expected_result = "\n#### Integrations\n\n##### HelloWorld\n- Documentation and metadata improvements.\n"
+        expected_result = "\n#### Integrations\n\n##### HelloWorld\n\n- Documentation and metadata improvements.\n"
         from demisto_sdk.commands.update_release_notes.update_rn import \
             UpdateRN
         mock_master.return_value = '1.0.0'
@@ -822,7 +823,7 @@ class TestRNUpdate:
                                        desc='Test description', text='text for test', from_version='5.5.0',
                                        docker_image=None, path=NOT_DEP_INTEGRATION_PATH)
 
-        assert desc == "##### Integration test\n- text for test\n- Command ***xdr-get-incidents*** is deprecated. Use " \
+        assert desc == "##### Integration test\n\n- text for test\n- Command ***xdr-get-incidents*** is deprecated. Use " \
                        "%%% instead.\n"
 
     def test_deprecated_rn_integration_command(self, mocker):
@@ -905,15 +906,19 @@ class TestRNUpdateUnit:
     FILES_PATH = os.path.normpath(os.path.join(__file__, f'{git_path()}/demisto_sdk/tests', 'test_files'))
     CURRENT_RN = """
 #### Incident Types
+
 - **Cortex XDR Incident**
 
 #### Incident Fields
+
 - **XDR Alerts**
 
 #### Object Types
+
 - **(Asset) - Sample GenericType**
 
 #### Object Fields
+
 - **(Asset) - Sample GenericField**
 """
     CHANGED_FILES = {
@@ -1687,7 +1692,7 @@ def test_handle_existing_rn_with_docker_image(new_rn: str, header_by_type: str, 
 
 
 @pytest.mark.parametrize('text, expected_rn_string',
-                         [('Testing the upload', '##### PackName\n- Testing the upload\n')])
+                         [('Testing the upload', '##### PackName\n\n- Testing the upload\n')])
 def test_force_and_text_update_rn(repo, text, expected_rn_string):
     """
     Given:

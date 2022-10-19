@@ -2,24 +2,52 @@ import tempfile
 
 import pytest
 
-from demisto_sdk.commands.common.mardown_lint import has_markdown_lint_errors
+from demisto_sdk.commands.common.hook_validations.readme import ReadMeValidator
+from demisto_sdk.commands.common.mardown_lint import run_markdownlint
 
 
 @pytest.mark.parametrize('file_content, expected_error', [
-    ('##Hello', 'MD018: No space present after the hash character on a possible Atx Heading'), (
+    ('##Hello', 'no-missing-space-atx'), (
         """
 ## Unreleased
 
    * Feature1
-* feature2""", 'MD005: Inconsistent indentation for list items at the same level'
+* feature2""", 'list-indent'
     ), ("""## Header
-    next line""", "MD022: Headings should be surrounded by blank lines."),
-    ("<p>something</p>", 'MD033: Inline HTML [Element: p] (no-inline-html)')
+    next line""", "blanks-around-headings"),
+    ("<p>something</p>", 'no-inline-html')
 ])
-def test_markdown_validations(file_content, expected_error, mocker):
-    click_mock = mocker.patch("click.secho")
-    with tempfile.NamedTemporaryFile(suffix=".md") as temp:
-        temp.write(file_content.encode())
-        temp.flush()
-        assert has_markdown_lint_errors(temp.name)
-        assert expected_error in click_mock.call_args.args[0]
+def test_markdown_validations(file_content, expected_error):
+    with ReadMeValidator.start_mdx_server():
+        response = run_markdownlint(file_content)
+        assert response.has_errors
+        assert expected_error in response.validations
+
+
+@pytest.mark.parametrize('file_content, expected_fix', [
+    ('##Hello', '## Hello'), (
+        """## Unreleased
+
+   * Feature1
+- feature2""", """## Unreleased
+
+* Feature1
+* feature2"""
+    ), ("""## Header
+    next line""", """## Header
+
+    next line""")
+])
+def test_markdown_fixes(file_content, expected_fix):
+    with ReadMeValidator.start_mdx_server():
+        response = run_markdownlint(file_content, fix=True)
+        assert not response.has_errors, response
+        assert not response.validations, response.validations
+        assert expected_fix == response.fixed_text, response.fixed_text
+
+
+def test_disabled_rule():
+    # Tests no h1 header and duplicate headers rule not active. Just to ensure config working properly
+    with ReadMeValidator.start_mdx_server():
+        assert not run_markdownlint("## Hello\n\n## Hello").has_errors, \
+            run_markdownlint("## Hello\n\n## Hello")['validations']
