@@ -20,7 +20,8 @@ MATCH (integration:{ContentType.INTEGRATION}{{is_server_item: true, object_id: r
 MERGE (cmd:{ContentType.COMMAND}{{object_id: rel_data.cmd, content_type: "{ContentType.COMMAND}"}})
 ON CREATE
     SET cmd:{labels_of(ContentType.COMMAND)},
-        cmd.name = rel_data.cmd
+        cmd.name = rel_data.cmd,
+        cmd.node_last_updated = datetime()
 
 // Create the relationship
 MERGE (integration)-[r:{Relationship.HAS_COMMAND}{{is_server_item: true}}]->(cmd)
@@ -61,14 +62,16 @@ MERGE (cmd:{ContentType.COMMAND}{build_target_properties(with_content_type=True)
 ON CREATE
     SET cmd:{labels_of(ContentType.COMMAND)},
         cmd.marketplaces = rel_data.source_marketplaces,
-        cmd.name = rel_data.name
+        cmd.name = rel_data.name,
+        cmd.node_last_updated = datetime()
 
 // Otherwize, add the integration's marketplaces to its marketplaces property
 ON MATCH
     SET cmd.marketplaces = REDUCE(
         marketplaces = cmd.marketplaces, mp IN rel_data.source_marketplaces |
         CASE WHEN NOT mp IN cmd.marketplaces THEN marketplaces + mp ELSE marketplaces END
-    )
+    ),
+        cmd.node_last_updated = datetime()
 
 // Create the relationship
 MERGE (integration)-[r:{Relationship.HAS_COMMAND}{{
@@ -98,7 +101,7 @@ MERGE (dependency:{target_type}{
 
 // If created, mark "not in repository" (all repository nodes were created already)
 ON CREATE
-    SET dependency.not_in_repository = true
+    SET dependency.in_repository = false
 
 // Get or create the relationship and set its "mandatorily" field based on relationship data
 MERGE (content_item)-[r:{Relationship.USES}]->(dependency)
@@ -137,7 +140,7 @@ MERGE (tpb:{ContentType.TEST_PLAYBOOK}{build_target_properties(with_content_type
 
 // If created, mark "not in repository" (all repository nodes were created already)
 ON CREATE
-    SET tpb.not_in_repository = true
+    SET tpb.in_repository = false
 
 // Get/create the relationship
 MERGE (content_item)-[r:{Relationship.TESTED_BY}]->(tpb)
@@ -151,7 +154,7 @@ def build_default_relationships_query(relationship: Relationship) -> str:
     MATCH (source:{ContentType.BASE_CONTENT}{build_source_properties()})
     MERGE (target:{ContentType.BASE_CONTENT}{build_target_properties()})
     ON CREATE
-        SET target.not_in_repository = true
+        SET target.in_repository = false
     MERGE (source)-[r:{relationship}]->(target)
     RETURN count(r) AS relationships_merged
 """

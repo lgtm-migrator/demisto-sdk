@@ -394,7 +394,7 @@ class TestCreateContentGraph:
         When:
             - Running create_content_graph().
         Then:
-            - Make sure the script has the boolean property "not_in_repository".
+            - Make sure the script has the boolean property "in_repository" equals false.
         """
         relationships = {
             Relationship.IN_PACK: [
@@ -420,7 +420,7 @@ class TestCreateContentGraph:
         with ContentGraphInterface() as interface:
             create_content_graph(interface)
             script = interface.get_single_node(object_id='TestScript')
-        assert script.get('not_in_repository')
+        assert script['in_repository'] is False
 
     def test_create_content_graph_duplicate_integrations(
         self,

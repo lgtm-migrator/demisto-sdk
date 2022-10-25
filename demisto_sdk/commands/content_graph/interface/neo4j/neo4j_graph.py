@@ -30,9 +30,12 @@ from demisto_sdk.commands.content_graph.interface.neo4j.queries.nodes import (
 from demisto_sdk.commands.content_graph.interface.neo4j.queries.relationships import (
     create_relationships, create_server_commands_relationships, get_relationships_by_type)
 from demisto_sdk.commands.content_graph.interface.neo4j.queries.tools import (
-    handle_duplicates,
     export_to_csv,
-    import_csv
+    import_csv,
+    post_import_schema_queries,
+    post_import_write_queries,
+    pre_import_schema_queries,
+    # pre_import_write_queries
 )
 
 logger = logging.getLogger('demisto-sdk')
@@ -135,8 +138,11 @@ class Neo4jContentGraphInterface(ContentGraphInterface):
         for idx, import_path in enumerate(import_paths, 1):
             prepare_csv_files_for_import(import_path, prefix=str(idx))
         with self.driver.session() as session:
+            # session.write_transaction(pre_import_write_queries)
+            session.write_transaction(pre_import_schema_queries)
             session.write_transaction(import_csv, NEO4J_IMPORT_PATH)
-            session.write_transaction(handle_duplicates)
+            session.write_transaction(post_import_write_queries)
+            session.write_transaction(post_import_schema_queries)
 
     def export_graph(self) -> None:
         clean_import_dir_before_export()

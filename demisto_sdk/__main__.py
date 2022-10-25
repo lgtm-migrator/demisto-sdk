@@ -2286,12 +2286,20 @@ def error_code(config, **kwargs):
 @click.option('-ud', '--use-docker', is_flag=True, help="Use docker service to run the content graph")
 @click.option('-us', '--use-existing', is_flag=True, help="Use existing service", default=False)
 @click.option('-o', '--output-file', type=click.Path(), help="dump file output", default=None)
+@click.option('-s', '--skip-server', is_flag=True, default=False,
+              help="If provided, does not add server content objects to graph.")
 @click.option('-v', "--verbose", count=True, help="Verbosity level -v / -vv / .. / -vvv",
               type=click.IntRange(0, 3, clamp=True), default=2, show_default=True)
 @click.option('-q', "--quiet", is_flag=True, help="Quiet output, only output results in the end")
 @click.option("-lp", "--log-path", help="Path to store all levels of logs",
               type=click.Path(resolve_path=True))
-def create_content_graph(use_docker: bool = False, use_existing: bool = False, output_file: Path = None, **kwargs):
+def create_content_graph(
+    use_docker: bool = False,
+    use_existing: bool = False,
+    output_file: Path = None,
+    skip_server: bool = False,
+    **kwargs
+):
     from demisto_sdk.commands.common.logger import logging_setup
     from demisto_sdk.commands.content_graph.content_graph_commands import \
         create_content_graph as create_content_graph_command
@@ -2305,7 +2313,7 @@ def create_content_graph(use_docker: bool = False, use_existing: bool = False, o
         output_file=output_file,
         use_docker=use_docker,
     ) as content_graph_interface:
-        create_content_graph_command(content_graph_interface)
+        create_content_graph_command(content_graph_interface, skip_server)
 
 
 # ====================== update-content-graph ====================== #
@@ -2339,6 +2347,8 @@ def update_content_graph(use_docker: bool = False, use_existing: bool = False, o
 
     import_paths = list(kwargs.get('import_path', [])) if not isinstance(kwargs.get('import_path'), str) else \
         [kwargs.get('import_path')]
+    import_paths = [Path(p) for p in import_paths]
+    packs = [] if not kwargs.get('packs') else kwargs.get('packs', '').split(',')
 
     with Neo4jContentGraphInterface(
         start_service=not use_existing,
@@ -2348,7 +2358,7 @@ def update_content_graph(use_docker: bool = False, use_existing: bool = False, o
         update_content_graph_command(
             content_graph_interface,
             external_import_paths=import_paths,
-            packs_to_update=kwargs.get('packs', '').split(','),
+            packs_to_update=packs,
         )
 
 

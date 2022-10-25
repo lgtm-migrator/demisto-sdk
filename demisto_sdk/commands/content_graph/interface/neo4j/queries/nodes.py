@@ -16,7 +16,10 @@ logger = logging.getLogger('demisto-sdk')
 CREATE_NODES_BY_TYPE_TEMPLATE = """
 UNWIND $data AS node_data
 CREATE (n:{labels}{{object_id: node_data.object_id}})
-SET n += node_data
+SET n += node_data,
+    n.node_last_updated = datetime(),
+    n.is_server_item = coalesce(n.is_server_item, false),
+    n.in_repository = CASE WHEN n.is_server_item THEN false ELSE true END
 RETURN count(n) AS nodes_created
 """
 

@@ -20,20 +20,21 @@ def prepare_csv_files_for_import(import_path: Path, prefix: str) -> None:
             with open(filename, 'r') as csv_file, tempfile:
                 reader = csv.reader(csv_file, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
                 writer = csv.writer(tempfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-                writer.writerow(next(reader))
+                headers = next(reader)
+                writer.writerow(headers)
                 for row in reader:
                     row[0] = prefix + row[0]
                     row[1] = prefix + row[1] if 'relationships' in filename.name else row[1]
                     writer.writerow(row)
             
-            new_file_path = NEO4J_IMPORT_PATH / f'{filename.stem}_{prefix}.csv' if prefix != "1" else filename
+            new_file_path = NEO4J_IMPORT_PATH / filename.name if not filename.name.startswith('content.') else filename
             shutil.move(tempfile.name, new_file_path.as_posix())
 
 
 def get_indexes_to_exclude(headers: List[str]) -> List[int]:
     return [
         idx for idx, x in enumerate(headers)
-        if x in ['__csv_id', '__csv_type'] or headers[:idx].count(x) > 0
+        if x in ['__csv_id', '__csv_type']
     ]
 
 

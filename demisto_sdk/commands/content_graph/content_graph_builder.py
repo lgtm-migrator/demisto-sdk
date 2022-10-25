@@ -22,6 +22,7 @@ class ContentGraphBuilder:
         self,
         repo_path: Path,
         content_graph: ContentGraphInterface,
+        skip_server: bool = False,
         clean_graph: bool = True,
         import_graphs: bool = False,
         external_import_paths: Optional[List[Path]] = None,
@@ -39,6 +40,7 @@ class ContentGraphBuilder:
         self.content_graph = content_graph
         self.nodes: Nodes = Nodes()
         self.relationships: Relationships = Relationships()
+        self.skip_server = skip_server
         self.packs_to_parse = packs
         self.external_import_paths = external_import_paths
         self._preprepare_database(clean_graph, import_graphs)
@@ -53,13 +55,13 @@ class ContentGraphBuilder:
         self.content_graph.create_indexes_and_constraints()
         if clean_graph:
             self.content_graph.clean_graph()
-
         if import_graphs:
             self.content_graph.import_graphs(self.external_import_paths)
-        else:
+        if not self.skip_server:
             self.content_graph.create_server_content_items()
 
         self.content_graph.delete_packs(self.packs_to_parse)
+        pass
 
     def _create_repository(self, path: Path) -> Repository:
         """ Parses the repository and creates a repository model.
